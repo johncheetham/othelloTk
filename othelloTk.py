@@ -23,6 +23,7 @@ import thread
 import time
 import inspect
 import os
+import shlex
 
 BLACK=0
 WHITE=1
@@ -82,7 +83,7 @@ class Othello(Frame):
         for i,j in [(3, 3), (4, 4), (3, 4), (4, 3)]:
             self.draw_piece(i, j)
 
-    # pass on move (only allowed if no loegal moves)
+    # pass on move (only allowed if no legal moves)
     def rclicked(self, event):
         if self.stm != BLACK or self.gameover:
             return
@@ -228,9 +229,6 @@ class Othello(Frame):
             return
         print "move:",self.mv
         mv = self.mv
-        if "wins" in mv or "Draw" in mv:
-            print "Game Over", mv
-            return
         # pass
         if mv == "@@@@":
             return
@@ -257,7 +255,7 @@ class Othello(Frame):
         i = 0
         while (p.poll() is not None):            
             i += 1
-            if i > 40:        
+            if i > 12:        
                 print "unable to start engine process"
                 return False
             time.sleep(0.25)        
@@ -267,6 +265,28 @@ class Othello(Frame):
         self.soutt = thread.start_new_thread( self.read_stdout, () )
         #self.command('xboard\n')
         self.command('protover 2\n')
+
+        # Engine should respond to "protover 2" with "feature" command
+        response_ok = False
+        i = 0
+        while True:            
+            for l in self.op:
+                l = l.strip()
+                if l.startswith("feature "):
+                    response_ok = True
+                    f = shlex.split(l)
+                    features = f[1:]
+                    for f in features:
+                        print f
+            self.op = []
+            if response_ok:
+                break            
+            i += 1
+            if i > 40:                
+                print "Error - no response from engine"
+                sys.exit(1)
+            time.sleep(0.25)
+
         self.command('variant reversi\n')
         #self.command('st 6\n')
         self.command('sd 4\n')
@@ -283,9 +303,6 @@ class Othello(Frame):
                     mv = l[7:]
                     self.mv = mv
                     self.op = []
-                    return
-                if "wins" in l or "Draw" in l:
-                    self.mv = l
                     return
             self.op = []
 
@@ -310,6 +327,7 @@ class Othello(Frame):
             try:
                 self.p.stdout.flush()
                 line = self.p.stdout.readline()
+                #print line
                 line = line.strip()
                 self.op.append(line)
             except Exception, e:
