@@ -83,7 +83,7 @@ class Othello(Frame):
         for i,j in [(3, 3), (4, 4), (3, 4), (4, 3)]:
             self.draw_piece(i, j)
 
-    # pass on move (only allowed if no legal moves)
+    # human passes on move (only allowed if no legal moves)
     def rclicked(self, event):
         if self.stm != BLACK or self.gameover:
             return
@@ -98,31 +98,42 @@ class Othello(Frame):
             self.after_idle(self.get_move)
             return
 
+    # process humans move (black)
     def clicked(self, event):
         global mc
         if self.stm != BLACK or self.gameover:
             return
-        # 0 - 8
-        x = event.x / 100 
+
+        # get x, y square co-ordinates (in range 0 - 7)
+        x = event.x / 100
         y = event.y / 100
+
+        # ignore index out of range (user clicked near edge of board)
+        if x > 7 or y > 7:
+            return
+
         if self.board[x][y] != UNOCCUPIED:
             return
 
+        # No legal moves
         if self.legal_moves == []:
             return
 
-        count = 0
-        for incx, incy in [(-1, 0), (-1, -1), (0, -1), (1, -1), (1,0), (1, 1), (0, 1), (-1, 1)]:
-            count += self.flip(x, y, incx, incy, self.stm)
-       
-        if count == 0:
+        # not a legal move
+        if (x, y) not in self.legal_moves:
             return
 
+        # legal move so place piece and flip opponents pieces
+        for incx, incy in [(-1, 0), (-1, -1), (0, -1), (1, -1), (1,0), (1, 1), (0, 1), (-1, 1)]:
+            self.flip(x, y, incx, incy, self.stm)
+
+        # convert move from board co-ordinates to othello format (e.g. 3, 5 goes to 'd6')
         l = "abcdefgh"[x]
         n = y + 1
         move = l + str(n)
         print "move:", move
         str1 = "usermove " + move + "\n"
+        # send human move to engine
         self.command(str1)
         if mc == 0:
             self.command('go\n')
@@ -132,11 +143,14 @@ class Othello(Frame):
         self.print_board()
         self.canvas.update_idletasks()
         self.mv = ""
+        self.gameover = self.check_for_gameover()
+        if self.gameover:
+            return
         self.ct= thread.start_new_thread( self.computer_move, () ) 
         self.after_idle(self.get_move)
-        self.gameover = self.check_for_gameover()
         return
 
+    # Game is over when neither side can move
     def check_for_gameover(self):
        if self.get_legal_moves(BLACK) == [] and self.get_legal_moves(WHITE) == []:
            self.gameover = True
@@ -179,6 +193,7 @@ class Othello(Frame):
        print "Legal moves:",self.get_legal_moves(self.stm)
        print
 
+    # count the discs on the board for side
     def count(self, side):
         count = 0
         for y in range(0, 8):
@@ -195,12 +210,12 @@ class Othello(Frame):
                     continue
                 count = 0
                 for incx, incy in [(-1, 0), (-1, -1), (0, -1), (1, -1), (1,0), (1, 1), (0, 1), (-1, 1)]:
-                    count += self.flip2(x, y, incx, incy, stm)
+                    count += self.count_flipped(x, y, incx, incy, stm)
                 if count > 0:
                     legal_moves.append((x, y))
         return legal_moves
 
-    def flip2(self, x, y, incx, incy, stm):
+    def count_flipped(self, x, y, incx, incy, stm):
         count = 0
         opponent = abs(stm - 1)
         xx = x + incx
@@ -223,6 +238,7 @@ class Othello(Frame):
         print
         print "white to move"
         time.sleep(1.0)
+        # if no move wait a second and try again
         if self.mv == "":
             time.sleep(1.0)
             self.after_idle(self.get_move)
@@ -231,15 +247,16 @@ class Othello(Frame):
         mv = self.mv
         # pass
         if mv == "@@@@":
+            self.stm = abs(self.stm - 1)
             return
+        # convert move to board coordinates (e.g. "d6" goes to 3, 5)
         letter = mv[0]
         num = mv[1]
         x = "abcdefgh".index(letter)
         y = int(num) - 1
 
-        count = 0
         for incx, incy in [(-1, 0), (-1, -1), (0, -1), (1, -1), (1,0), (1, 1), (0, 1), (-1, 1)]:                        
-            count += self.flip(x, y, incx, incy, self.stm)              
+            self.flip(x, y, incx, incy, self.stm)              
         self.stm = abs(self.stm - 1)
         self.print_board()
         self.gameover = self.check_for_gameover()
@@ -255,7 +272,7 @@ class Othello(Frame):
         i = 0
         while (p.poll() is not None):            
             i += 1
-            if i > 12:        
+            if i > 40:        
                 print "unable to start engine process"
                 return False
             time.sleep(0.25)        
@@ -282,7 +299,7 @@ class Othello(Frame):
             if response_ok:
                 break            
             i += 1
-            if i > 40:                
+            if i > 12:                
                 print "Error - no response from engine"
                 sys.exit(1)
             time.sleep(0.25)
@@ -347,12 +364,9 @@ class Othello(Frame):
                 fliplist.append((xx, yy))               
             elif self.board[xx][yy] == stm:
                 if count > 0:           
-                    for i,j in fliplist:
-                        xxx = i * 100 + 50
-                        yyy = j * 100 + 50
-                        self.canvas.create_oval(xxx - 45, yyy - 45, xxx + 51, yyy + 51, fill=colour[stm])
-                        #self.draw_piece(i,j)
+                    for i,j in fliplist:                    
                         self.board[i][j] = stm
+                        self.draw_piece(i,j)
                 return count                
             else:
                 return 0
@@ -361,6 +375,7 @@ class Othello(Frame):
 
 root = Tk()
 root.resizable(width=FALSE, height=FALSE)
+#root.aspect(1,1,1,1)
 app = Othello(root)
 app.master.title('OthelloTK')
 app.mainloop()
