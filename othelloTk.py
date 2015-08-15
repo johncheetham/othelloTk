@@ -52,27 +52,39 @@ class Othello(Frame):
         self.board[4][3] = BLACK
 
         self.stm = BLACK # side to move
+        screen_width = master.winfo_screenwidth()
+        screen_height = master.winfo_screenheight()
         self.createWidgets()
         self.engine_init()
         self.gameover = False
         self.after_idle(self.print_board)
 
-    def createWidgets(self): 
-        self.canvas = Canvas(self, width=806, height=806, bg="darkgreen")
-
+    def createWidgets(self):
+        screen_width = root.winfo_screenwidth()
+        screen_height = root.winfo_screenheight()
+        line_width = 4
+        self.line_width = line_width
+        square_width = int((min(screen_width, screen_height) * 0.75) / 8)
+        self.square_width = square_width
+        square_height = square_width
+        self.square_height = square_height
+        board_width = (square_width * 8)
+        board_height = board_width
+        self.canvas = Canvas(self, width=board_width + line_width, height=board_height + line_width, bg="darkgreen")
+        
         # horizontal board lines
-        x = 3
-        y = 3
+        x = 0
+        y = 0
         for i in range(0, 9):
-            self.canvas.create_line(x, y, 806, y, fill="black", width="5")
-            y += 100
+            self.canvas.create_line(x, y + line_width - 1, board_width + line_width, y + line_width - 1, fill="black", width=line_width)
+            y += square_height
 
         # vertical board lines
-        x = 3
-        y = 3
+        x = 0
+        y = 0
         for i in range(0, 9):
-            self.canvas.create_line(x, y, x, 806, fill="black", width="5")
-            x += 100
+            self.canvas.create_line(x + line_width- 1, y, x + line_width - 1, board_height + line_width, fill="black", width=line_width)
+            x += square_width
 
         self.canvas.grid()
 
@@ -105,8 +117,8 @@ class Othello(Frame):
             return
 
         # get x, y square co-ordinates (in range 0 - 7)
-        x = event.x / 100
-        y = event.y / 100
+        x = event.x / self.square_width
+        y = event.y / self.square_height
 
         # ignore index out of range (user clicked near edge of board)
         if x > 7 or y > 7:
@@ -323,13 +335,17 @@ class Othello(Frame):
                     return
             self.op = []
 
-    def draw_piece(self, i, j):
-        x = (i+1) * 100 - 50
-        y = (j+1) * 100 - 50
+    def draw_piece(self, i, j):        
+        adj = 5
+        x0 = i * self.square_width + self.line_width - 1 + adj
+        y0 = j * self.square_width + self.line_width - 1 + adj
+        x1 = x0 + self.square_width - adj * 2
+        y1 = y0 + self.square_width - adj * 2
         if self.board[i][j] == BLACK:
-            oval = self.canvas.create_oval(x - 45, y - 45, x + 51, y + 51, fill=colour[BLACK])
-        elif  self.board[i][j] == WHITE:
-            oval = self.canvas.create_oval(x - 45, y - 45, x + 51, y + 51, fill=colour[WHITE])        
+            fill_colour = colour[BLACK]
+        else:
+            fill_colour = colour[WHITE]
+        oval = self.canvas.create_oval(x0, y0, x1, y1, fill=fill_colour)
 
     def command(self, cmd):
         try:
