@@ -34,10 +34,9 @@ mc = 0
 
 class Othello(Frame):
     def __init__(self, master):
-        Frame.__init__(self, master) 
-        self.grid()
-        self.pack()
-
+        Frame.__init__(self, master)
+        self.pack(fill=BOTH, expand=YES)
+        master.minsize(width=200, height=200)
         row = []
         for i in range(0, 8):
             row.append(UNOCCUPIED)
@@ -52,8 +51,7 @@ class Othello(Frame):
         self.board[4][3] = BLACK
 
         self.stm = BLACK # side to move
-        screen_width = master.winfo_screenwidth()
-        screen_height = master.winfo_screenheight()
+
         self.createWidgets()
         self.engine_init()
         self.gameover = False
@@ -62,38 +60,62 @@ class Othello(Frame):
     def createWidgets(self):
         screen_width = root.winfo_screenwidth()
         screen_height = root.winfo_screenheight()
-        line_width = 4
+        line_width = 2
         self.line_width = line_width
-        square_width = int((min(screen_width, screen_height) * 0.75) / 8)
-        self.square_width = square_width
+        square_width = int((min(screen_width, screen_height) * 0.6) / 8) 
         square_height = square_width
         self.square_height = square_height
         board_width = (square_width * 8)
         board_height = board_width
-        self.canvas = Canvas(self, width=board_width + line_width, height=board_height + line_width, bg="darkgreen")
-        
+        self.canvas = ResizingCanvas(self, width=board_width, height=board_height, bg="darkgreen")
+
+        self.canvas.pack(fill=BOTH, expand=YES)
+        # update so winfo_width will return correct value
+        self.canvas.update_idletasks()
+
+        self.draw_board()
+        self.canvas.bind("<Button-1>", self.clicked)
+        self.canvas.bind("<Button-3>", self.rclicked)
+
+    def draw_board(self):
+        width = self.canvas.winfo_width()
+        height = self.canvas.winfo_height()
+
+        # if window size not divisible by 8 we will have extra space
+        # at the edges
+        x_extra = (width % 8)
+        y_extra = (height % 8)
+
+        x_offset = x_extra / 2
+        y_offset = y_extra / 2
+
+        width = width - x_extra
+        height = height - y_extra
+
+        square_width = width / 8
+        square_height = height / 8
+        self.canvas.delete(ALL)
+        line_width = self.line_width
         # horizontal board lines
         x = 0
         y = 0
         for i in range(0, 9):
-            self.canvas.create_line(x, y + line_width - 1, board_width + line_width, y + line_width - 1, fill="black", width=line_width)
+            self.canvas.create_line(x + x_offset, y + y_offset, width + x_offset, y + y_offset, fill="black", width=line_width)
             y += square_height
 
         # vertical board lines
         x = 0
         y = 0
         for i in range(0, 9):
-            self.canvas.create_line(x + line_width- 1, y, x + line_width - 1, board_height + line_width, fill="black", width=line_width)
+            self.canvas.create_line(x + x_offset, y + y_offset, x + x_offset, height + y_offset, fill="black", width=line_width)
             x += square_width
 
-        self.canvas.grid()
-
-        self.canvas.bind("<Button-1>", self.clicked)
-        self.canvas.bind("<Button-3>", self.rclicked)
-
+        self.piece_ids = []
         # draw the 4 pieces at start position
-        for i,j in [(3, 3), (4, 4), (3, 4), (4, 3)]:
-            self.draw_piece(i, j)
+        self.canvas.update_idletasks()
+        for y in range(0, 8):
+            for x in range(0, 8):
+                self.draw_piece(x, y)
 
     # human passes on move (only allowed if no legal moves)
     def rclicked(self, event):
@@ -117,9 +139,9 @@ class Othello(Frame):
             return
 
         # get x, y square co-ordinates (in range 0 - 7)
-        x = event.x / self.square_width
-        y = event.y / self.square_height
-
+        x = event.x / (self.canvas.winfo_width() / 8)
+        y = event.y / (self.canvas.winfo_height() / 8)
+ 
         # ignore index out of range (user clicked near edge of board)
         if x > 7 or y > 7:
             return
@@ -335,17 +357,30 @@ class Othello(Frame):
                     return
             self.op = []
 
-    def draw_piece(self, i, j):        
-        adj = 5
-        x0 = i * self.square_width + self.line_width - 1 + adj
-        y0 = j * self.square_width + self.line_width - 1 + adj
-        x1 = x0 + self.square_width - adj * 2
-        y1 = y0 + self.square_width - adj * 2
+    def draw_piece(self, i, j):
+        # remove piece (if any) before redrawing it
+        for t in self.piece_ids:
+            x,y,piece_id = t
+            if (x,y) == (i,j):
+                self.canvas.delete(piece_id)
+                self.piece_ids.remove((x,y,piece_id))
+        square_width = (self.canvas.winfo_width() / 8)
+        square_height = (self.canvas.winfo_height() / 8)
+        adj =  square_width * 0.1
+        x0 = i * square_width + adj
+        y0 = j * square_height + adj
+        x1 = (i + 1) * square_width - adj
+        y1 = (j + 1) * square_height - adj
+
         if self.board[i][j] == BLACK:
             fill_colour = colour[BLACK]
-        else:
+        elif self.board[i][j] == WHITE:
             fill_colour = colour[WHITE]
-        oval = self.canvas.create_oval(x0, y0, x1, y1, fill=fill_colour)
+        else:
+            return
+        piece_id = self.canvas.create_oval(x0, y0, x1, y1, fill=fill_colour)
+        oval_tup = (i,j,piece_id)
+        self.piece_ids.append(oval_tup)
 
     def command(self, cmd):
         try:
@@ -389,9 +424,33 @@ class Othello(Frame):
             xx = xx + incx
             yy = yy + incy
 
+# a subclass of Canvas for dealing with resizing of windows
+class ResizingCanvas(Canvas):
+    def __init__(self,parent,**kwargs):
+        Canvas.__init__(self,parent,**kwargs)
+        self.bind("<Configure>", self.on_resize)
+        self.height = self.winfo_reqheight()
+        self.width = self.winfo_reqwidth()
+        self.parent = parent
+
+    def on_resize(self,event):
+        self.parent.square_width =  root.winfo_width() / 8
+        # determine the ratio of old width/height to new width/height
+        wscale = float(event.width)/self.width
+        hscale = float(event.height)/self.height
+        self.width = event.width
+        self.height = event.height
+        if wscale == 1.0 and hscale == 1.0:
+            return
+
+        self.config(width=self.width, height=self.height)
+        self.parent.canvas.update_idletasks()     
+        self.parent.draw_board()
+
 root = Tk()
-root.resizable(width=FALSE, height=FALSE)
-#root.aspect(1,1,1,1)
+#root.resizable(width=FALSE, height=FALSE)
+#root.geometry('{}x{}'.format(900, 900))
+root.aspect(1,1,1,1)
 app = Othello(root)
 app.master.title('OthelloTK')
 app.mainloop()
