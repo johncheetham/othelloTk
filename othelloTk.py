@@ -28,14 +28,16 @@ import shlex
 BLACK=0
 WHITE=1
 UNOCCUPIED=-1
-colour=("black", "white")
+COLOUR=("black", "white")
 
 mc = 0
 
 class Othello(Frame):
     def __init__(self, master):
         Frame.__init__(self, master)
-        self.pack(fill=BOTH, expand=YES)
+        self.grid(sticky=N + S + E + W)
+        master.rowconfigure(0, weight=1)
+        master.columnconfigure(0, weight=1)
         master.minsize(width=200, height=200)
         row = []
         for i in range(0, 8):
@@ -67,15 +69,17 @@ class Othello(Frame):
         self.square_height = square_height
         board_width = (square_width * 8)
         board_height = board_width
-        self.canvas = ResizingCanvas(self, width=board_width, height=board_height, bg="darkgreen")
+        self.canvas = Canvas(self, width=board_width, height=board_height, bg="darkgreen")
+        self.canvas.bind("<Configure>", self.on_resize)
+        self.canvas.grid(row=0, column=0, sticky=N + S + E + W)
+        self.rowconfigure(0, weight=1)
+        self.columnconfigure(0, weight=1)
 
-        self.canvas.pack(fill=BOTH, expand=YES)
-        # update so winfo_width will return correct value
-        self.canvas.update_idletasks()
-
-        self.draw_board()
         self.canvas.bind("<Button-1>", self.clicked)
         self.canvas.bind("<Button-3>", self.rclicked)
+
+    def on_resize(self,event):
+        self.draw_board()
 
     def draw_board(self):
         width = self.canvas.winfo_width()
@@ -112,7 +116,6 @@ class Othello(Frame):
 
         self.piece_ids = []
         # draw the 4 pieces at start position
-        self.canvas.update_idletasks()
         for y in range(0, 8):
             for x in range(0, 8):
                 self.draw_piece(x, y)
@@ -373,9 +376,9 @@ class Othello(Frame):
         y1 = (j + 1) * square_height - adj
 
         if self.board[i][j] == BLACK:
-            fill_colour = colour[BLACK]
+            fill_colour = COLOUR[BLACK]
         elif self.board[i][j] == WHITE:
-            fill_colour = colour[WHITE]
+            fill_colour = COLOUR[WHITE]
         else:
             return
         piece_id = self.canvas.create_oval(x0, y0, x1, y1, fill=fill_colour)
@@ -423,29 +426,6 @@ class Othello(Frame):
                 return 0
             xx = xx + incx
             yy = yy + incy
-
-# a subclass of Canvas for dealing with resizing of windows
-class ResizingCanvas(Canvas):
-    def __init__(self,parent,**kwargs):
-        Canvas.__init__(self,parent,**kwargs)
-        self.bind("<Configure>", self.on_resize)
-        self.height = self.winfo_reqheight()
-        self.width = self.winfo_reqwidth()
-        self.parent = parent
-
-    def on_resize(self,event):
-        self.parent.square_width =  root.winfo_width() / 8
-        # determine the ratio of old width/height to new width/height
-        wscale = float(event.width)/self.width
-        hscale = float(event.height)/self.height
-        self.width = event.width
-        self.height = event.height
-        if wscale == 1.0 and hscale == 1.0:
-            return
-
-        self.config(width=self.width, height=self.height)
-        self.parent.canvas.update_idletasks()     
-        self.parent.draw_board()
 
 root = Tk()
 #root.resizable(width=FALSE, height=FALSE)
