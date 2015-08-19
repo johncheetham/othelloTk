@@ -38,7 +38,7 @@ class Othello(Frame):
         self.grid(sticky=N + S + E + W)
         master.rowconfigure(0, weight=1)
         master.columnconfigure(0, weight=1)
-        master.minsize(width=200, height=200)
+        master.minsize(width=300, height=300)
         row = []
         for i in range(0, 8):
             row.append(UNOCCUPIED)
@@ -60,14 +60,10 @@ class Othello(Frame):
         self.after_idle(self.print_board)
 
     def createWidgets(self):
+        self.line_width = 2
         screen_width = root.winfo_screenwidth()
         screen_height = root.winfo_screenheight()
-        line_width = 2
-        self.line_width = line_width
-        square_width = int((min(screen_width, screen_height) * 0.6) / 8) 
-        square_height = square_width
-        self.square_height = square_height
-        board_width = (square_width * 8)
+        board_width = min(screen_width, screen_height) * 0.6
         board_height = board_width
 
         pad_frame = Frame(borderwidth=0, background="light blue", width=board_width, height=board_height)
@@ -88,37 +84,39 @@ class Othello(Frame):
     def on_resize(self,event):
         self.draw_board()
 
+    def get_board_size(self):
+        canvas_width = self.canvas.winfo_width()
+        canvas_height = self.canvas.winfo_height()
+        border_size_w = canvas_width / 9
+        border_size_h = canvas_height / 9
+        board_width = canvas_width - border_size_w
+        board_height = canvas_height - border_size_h
+        # Make sure width/height is divisible by 8
+        board_width = board_width - (board_width % 8)
+        board_height = board_height - (board_height % 8)
+        x_offset = border_size_w / 2
+        y_offset = border_size_h / 2
+        return board_width, board_height, x_offset, y_offset, border_size_w, border_size_h
+
     def draw_board(self):
-        width = self.canvas.winfo_width()
-        height = self.canvas.winfo_height()
+        board_width, board_height, x_offset, y_offset, border_size_w, border_size_h = self.get_board_size()
 
-        # if window size not divisible by 8 we will have extra space
-        # at the edges
-        x_extra = (width % 8)
-        y_extra = (height % 8)
-
-        x_offset = x_extra / 2
-        y_offset = y_extra / 2
-
-        width = width - x_extra
-        height = height - y_extra
-
-        square_width = width / 8
-        square_height = height / 8
+        square_width = board_width / 8
+        square_height = board_height / 8
         self.canvas.delete(ALL)
         line_width = self.line_width
         # horizontal board lines
         x = 0
         y = 0
         for i in range(0, 9):
-            self.canvas.create_line(x + x_offset, y + y_offset, width + x_offset, y + y_offset, fill="black", width=line_width)
+            self.canvas.create_line(x + x_offset, y + y_offset, board_width + x_offset, y + y_offset, fill="black", width=line_width)
             y += square_height
 
         # vertical board lines
         x = 0
         y = 0
         for i in range(0, 9):
-            self.canvas.create_line(x + x_offset, y + y_offset, x + x_offset, height + y_offset, fill="black", width=line_width)
+            self.canvas.create_line(x + x_offset, y + y_offset, x + x_offset, board_height + y_offset, fill="black", width=line_width)
             x += square_width
 
         self.piece_ids = []
@@ -126,6 +124,52 @@ class Othello(Frame):
         for y in range(0, 8):
             for x in range(0, 8):
                 self.draw_piece(x, y)
+
+
+        fontsize = (square_width / 4) * -1
+        # draw x co-ordinates
+        x = square_width
+        let="ABCDEFGH"
+        for i in range(0, 8):
+            #self.canvas.create_text(x, y_offset / 2, font=("Helvetica", fontsize, "bold italic"), text=let[i], fill="light blue")
+            self.canvas.create_text(x, y_offset / 2, font=("Helvetica", fontsize, "italic"), text=let[i], fill="light blue")
+            x += square_width
+
+        # draw y co-ordinates
+        y = square_width
+        num="12345678"
+        for i in range(0, 8):
+            self.canvas.create_text(x_offset / 2, y, font=("Helvetica", fontsize, "italic"), text=num[i], fill="light blue")
+            y += square_height
+
+    def draw_piece(self, i, j):
+        # remove piece (if any) before redrawing it
+        for t in self.piece_ids:
+            x,y,piece_id = t
+            if (x,y) == (i,j):
+                self.canvas.delete(piece_id)
+                self.piece_ids.remove((x,y,piece_id))
+        board_width, board_height, x_offset, y_offset, border_size_w, border_size_h = self.get_board_size()
+        square_width = board_width / 8
+        square_height = board_height / 8
+
+        # adjustment because we don't want the disc to fill the whole square
+        adj =  square_width * 0.1
+
+        x0 = i * square_width + adj + x_offset
+        y0 = j * square_height + adj + y_offset
+        x1 = (i + 1) * square_width - adj + x_offset
+        y1 = (j + 1) * square_height - adj + y_offset
+
+        if self.board[i][j] == BLACK:
+            fill_colour = COLOUR[BLACK]
+        elif self.board[i][j] == WHITE:
+            fill_colour = COLOUR[WHITE]
+        else:
+            return
+        piece_id = self.canvas.create_oval(x0, y0, x1, y1, fill=fill_colour)
+        oval_tup = (i,j,piece_id)
+        self.piece_ids.append(oval_tup)
 
     # human passes on move (only allowed if no legal moves)
     def rclicked(self, event):
@@ -148,13 +192,16 @@ class Othello(Frame):
         if self.stm != BLACK or self.gameover:
             return
 
+        board_width, board_height, x_offset, y_offset, border_size_w, border_size_h = self.get_board_size()
+
+        # check the click was on the board
+        if ((event.x < x_offset) or (event.x > (board_width + x_offset)) or
+           (event.y < y_offset) or (event.y > (board_height + y_offset))):
+           return
+
         # get x, y square co-ordinates (in range 0 - 7)
-        x = event.x / (self.canvas.winfo_width() / 8)
-        y = event.y / (self.canvas.winfo_height() / 8)
- 
-        # ignore index out of range (user clicked near edge of board)
-        if x > 7 or y > 7:
-            return
+        x = (event.x - x_offset) / (board_width / 8)
+        y = (event.y - y_offset) / (board_height / 8) 
 
         if self.board[x][y] != UNOCCUPIED:
             return
@@ -366,31 +413,6 @@ class Othello(Frame):
                     self.op = []
                     return
             self.op = []
-
-    def draw_piece(self, i, j):
-        # remove piece (if any) before redrawing it
-        for t in self.piece_ids:
-            x,y,piece_id = t
-            if (x,y) == (i,j):
-                self.canvas.delete(piece_id)
-                self.piece_ids.remove((x,y,piece_id))
-        square_width = (self.canvas.winfo_width() / 8)
-        square_height = (self.canvas.winfo_height() / 8)
-        adj =  square_width * 0.1
-        x0 = i * square_width + adj
-        y0 = j * square_height + adj
-        x1 = (i + 1) * square_width - adj
-        y1 = (j + 1) * square_height - adj
-
-        if self.board[i][j] == BLACK:
-            fill_colour = COLOUR[BLACK]
-        elif self.board[i][j] == WHITE:
-            fill_colour = COLOUR[WHITE]
-        else:
-            return
-        piece_id = self.canvas.create_oval(x0, y0, x1, y1, fill=fill_colour)
-        oval_tup = (i,j,piece_id)
-        self.piece_ids.append(oval_tup)
 
     def command(self, cmd):
         try:
