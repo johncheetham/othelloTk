@@ -29,7 +29,6 @@ BLACK=0
 WHITE=1
 UNOCCUPIED=-1
 COLOUR=("black", "white")
-
 mc = 0
 
 class Othello(Frame):
@@ -57,6 +56,7 @@ class Othello(Frame):
         self.createWidgets()
         self.engine_init()
         self.gameover = False
+        self.piece_ids = []
         self.after_idle(self.print_board)
 
     def createWidgets(self):
@@ -109,14 +109,14 @@ class Othello(Frame):
         x = 0
         y = 0
         for i in range(0, 9):
-            self.canvas.create_line(x + x_offset, y + y_offset, board_width + x_offset, y + y_offset, fill="black", width=line_width)
+            self.canvas.create_line(x + x_offset, y + y_offset, board_width + x_offset, y + y_offset, fill="black", width=line_width, tags="line")
             y += square_height
 
         # vertical board lines
         x = 0
         y = 0
         for i in range(0, 9):
-            self.canvas.create_line(x + x_offset, y + y_offset, x + x_offset, board_height + y_offset, fill="black", width=line_width)
+            self.canvas.create_line(x + x_offset, y + y_offset, x + x_offset, board_height + y_offset, fill="black", width=line_width, tags="line")
             x += square_width
 
         self.piece_ids = []
@@ -132,14 +132,14 @@ class Othello(Frame):
         let="ABCDEFGH"
         for i in range(0, 8):
             #self.canvas.create_text(x, y_offset / 2, font=("Helvetica", fontsize, "bold italic"), text=let[i], fill="light blue")
-            self.canvas.create_text(x, y_offset / 2, font=("Helvetica", fontsize, "italic"), text=let[i], fill="light blue")
+            self.canvas.create_text(x, y_offset / 2, font=("Helvetica", fontsize, "italic"), text=let[i], fill="light blue", tags="coords")
             x += square_width
 
         # draw y co-ordinates
         y = square_width
         num="12345678"
         for i in range(0, 8):
-            self.canvas.create_text(x_offset / 2, y, font=("Helvetica", fontsize, "italic"), text=num[i], fill="light blue")
+            self.canvas.create_text(x_offset / 2, y, font=("Helvetica", fontsize, "italic"), text=num[i], fill="light blue", tags="coords")
             y += square_height
 
     def draw_piece(self, i, j):
@@ -155,21 +155,29 @@ class Othello(Frame):
 
         # adjustment because we don't want the disc to fill the whole square
         adj =  square_width * 0.1
-
-        x0 = i * square_width + adj + x_offset
-        y0 = j * square_height + adj + y_offset
-        x1 = (i + 1) * square_width - adj + x_offset
-        y1 = (j + 1) * square_height - adj + y_offset
+        tag = "piece"
 
         if self.board[i][j] == BLACK:
             fill_colour = COLOUR[BLACK]
         elif self.board[i][j] == WHITE:
             fill_colour = COLOUR[WHITE]
+        elif (i, j) in self.legal_moves:
+            #if self.stm == WHITE:
+            #    return
+            fill_colour = "light blue"
+            adj = square_width * 0.45
+            tag = "possible_move"
         else:
             return
-        piece_id = self.canvas.create_oval(x0, y0, x1, y1, fill=fill_colour)
-        oval_tup = (i,j,piece_id)
-        self.piece_ids.append(oval_tup)
+
+        x0 = i * square_width + adj + x_offset
+        y0 = j * square_height + adj + y_offset
+        x1 = (i + 1) * square_width - adj + x_offset
+        y1 = (j + 1) * square_height - adj + y_offset
+        piece_id = self.canvas.create_oval(x0, y0, x1, y1, fill=fill_colour, tags=tag)
+        if tag != "possible_move":
+            oval_tup = (i,j,piece_id)
+            self.piece_ids.append(oval_tup)
 
     # human passes on move (only allowed if no legal moves)
     def rclicked(self, event):
@@ -258,7 +266,15 @@ class Othello(Frame):
        return False
 
     def print_board(self):
+       #tagged = self.canvas.find_withtag("possible_move")
+       #for t in tagged:
+       #    self.canvas.delete(t)
+       self.canvas.delete("possible_move")
        self.legal_moves = self.get_legal_moves(self.stm)
+       for y in range(0, 8):
+           for x in range(0, 8):
+               if (x,y) in self.legal_moves:
+                   self.draw_piece(x, y)
        print
        print "  A B C D E F G H"        
        for y in range(0, 8):
@@ -283,6 +299,16 @@ class Othello(Frame):
            print "white to move"
        print "Legal moves:",self.get_legal_moves(self.stm)
        print
+
+       #ids = self.canvas.find_all()
+       #for id in ids:
+       #    tags = self.canvas.gettags(id)[0]
+       #    if tags not in ("coords","line"):
+       #        print id,self.canvas.gettags(id)
+       #print "-"
+       #for t in self.piece_ids:
+       #    print t, self.canvas.gettags(t[2])
+
 
     # count the discs on the board for side
     def count(self, side):
@@ -486,6 +512,6 @@ root = Tk()
 #root.geometry('{}x{}'.format(900, 900))
 root.aspect(1,1,1,1)
 app = Othello(root)
-app.master.title('OthelloTK')
+app.master.title('OthelloTk')
 app.mainloop()
 
