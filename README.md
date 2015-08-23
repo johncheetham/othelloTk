@@ -17,10 +17,22 @@ Installation
  1. Download the edax othello engine from http://abulmo.perso.neuf.fr
     This has a prebuilt binary for Linux 64 bit.
 
- 2. Change the path in the edax.sh script to point to the edax bin
-    folder.
- 
- 3. Start othelloTk with 'python othelloTk'
+ 2. Start othelloTk with 'python othelloTk'
+
+ 3. Do edit/preferences and set the engine path to the edax executable.
+    This is called lEdax-x64 in the edax bin folder (if you are using
+    Linux 64 bit).
+
+ 4. Set opponent to engine (you may need to exit preferences and then
+    go in again).
+
+ 5. Do new game and play against edax.
+
+The settings will be remembered so you only need do it once.
+When changing the preferences you need to do New Game for them to
+take effect.
+
+This is a work in progress so it will have bugs and minimal features.
 
 Usage
 -----

@@ -18,26 +18,58 @@
 #   
 
 from Tkinter import *
+from tkMessageBox import *
+from tkFileDialog import *
 import subprocess
 import thread
 import time
 import inspect
 import os
 import shlex
+import json
 
 BLACK=0
 WHITE=1
 UNOCCUPIED=-1
 COLOUR=("black", "white")
-mc = 0
+HUMAN=0
+COMPUTER=1
 
 class Othello(Frame):
     def __init__(self, master):
         Frame.__init__(self, master)
-        self.grid(sticky=N + S + E + W)
-        master.rowconfigure(0, weight=1)
-        master.columnconfigure(0, weight=1)
+
+        self.othellopath = os.path.expanduser("~") + "/.othelloTk"
+
+        if not os.path.exists(self.othellopath):
+            try:
+                os.makedirs(self.othellopath)
+            except OSError, exc:                
+                print "Error - unable to create .othelloTk folder"
+                sys.exit(1)
+
+        # set default values used at first run
+        self.settings = {
+                         "version": "0.0.1",
+                         "enginepath": "",
+                         "opponent": HUMAN
+                        }
+
+        self.settings_filepath = os.path.join (self.othellopath, "settings.json")
+        # create settings file as ~/.othelloTk/settings.json if first run
+        if not os.path.exists(self.settings_filepath):
+            with open(self.settings_filepath, 'w') as outfile:
+                json.dump(self.settings, outfile, indent=4)
+
+        # read settings from file
+        with open(self.settings_filepath) as settings_file:
+            self.settings = json.load(settings_file)
+
+        # make resizeable
+        self.grid(sticky=N + S + E + W) 
         master.minsize(width=300, height=300)
+        self.master = master
+        self.master.title('OthelloTk')
         row = []
         for i in range(0, 8):
             row.append(UNOCCUPIED)
@@ -45,6 +77,104 @@ class Othello(Frame):
         self.board = []
         for i in range(0,8):
             self.board.append(row[:])
+    
+        self.board[3][3] = WHITE
+        self.board[4][4] = WHITE
+        self.board[3][4] = BLACK
+        self.board[4][3] = BLACK
+
+        self.player = [HUMAN, self.settings["opponent"]]
+        self.stm = BLACK # side to move
+        self.soutt = None
+        self.first = True
+        self.createWidgets()
+        self.gameover = False
+        self.engine_active = False
+        self.piece_ids = []
+        self.after_idle(self.print_board)
+
+    def createWidgets(self):
+        # make resizeable
+        top=self.winfo_toplevel()
+        top.rowconfigure(0, weight=1)
+        top.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=1)
+        self.columnconfigure(0, weight=1)
+        #self.columnconfigure(1, weight=2)
+
+        self.line_width = 2
+        screen_width = root.winfo_screenwidth()
+        screen_height = root.winfo_screenheight()
+        board_width = min(screen_width, screen_height) * 0.6
+        board_height = board_width
+
+        #pad_frame = Frame(self, borderwidth=0, background="light blue", width=board_width, height=board_height)
+        pad_frame = Frame(self, borderwidth=0, width=board_width, height=board_height)
+        pad_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=15)
+
+        self.canvas = Canvas(pad_frame, width=board_width, height=board_height, bg="darkgreen")
+        set_aspect(self.canvas, pad_frame, aspect_ratio=1.0)
+
+        self.canvas.bind("<Configure>", self.on_resize)
+
+        self.canvas.bind("<Button-1>", self.clicked)
+        self.canvas.bind("<Button-3>", self.rclicked)
+
+        #info_frame = Frame(self, borderwidth=0, background="light blue", width=board_width / 2, height=board_height)
+        #info_frame.grid(row=0, column=1, sticky="nsew")
+
+        #l = Label(info_frame, text = "* Black", bg="light blue", font=("Helvetica", -32, "italic"))
+        #l.grid(row=0, column=0, sticky="w")
+
+        # menubar
+        self.master.option_add('*tearOff', FALSE)
+        menubar = Menu(self.master)
+
+        menu_file = Menu(menubar)
+        menu_edit = Menu(menubar)
+        menu_play = Menu(menubar)
+        #menu_help = Menu(menubar)
+        menubar.add_cascade(menu=menu_file, label='File')
+        menubar.add_cascade(menu=menu_edit, label='Edit')
+        menubar.add_cascade(menu=menu_play, label='Play')
+        #menubar.add_cascade(menu=menu_help, label='Help')
+
+        def about():
+            showinfo("About OthelloTk", "OthelloTk\n\n0.0.1\n\n"
+                                        "A GUI to play Othello against Edax.\n\n"
+                                         "Copyright (c) 2015 John Cheetham\n\n"
+                                         "http://johncheetham.com\n\n" 
+                                         "This program comes with ABSOLUTELY NO WARRANTY")
+
+        def preferences():
+            d = PreferencesDialog(self, self.master)
+            # save settings to file
+            if d.result is not None:
+                with open(self.settings_filepath, 'w') as outfile:
+                    json.dump(self.settings, outfile, indent=4)
+            return
+
+        menu_file.add_command(label='New Game', command=self.new_game, underline=0, accelerator="Ctrl+N")
+        menu_file.add_separator()
+        menu_file.add_command(label='Quit', command=self.quit_program, underline=0, accelerator="Ctrl+Q")
+        menu_edit.add_command(label='Preferences', command=preferences)
+        menu_play.add_command(label='Pass', command=self.pass_on_move, underline=0, accelerator="Ctrl+P")
+        #menu_help.add_command(label='About', command=about, underline=0)
+        self.master.config(menu=menubar)
+
+        # accelerator keys
+        self.bind_all("<Control-q>", self.quit_program)
+        self.bind_all("<Control-n>", self.new_game)
+        self.bind_all("<Control-p>", self.pass_on_move)
+
+    def quit_program(self, event=None):
+        self.quit()
+
+    def new_game(self, event=None):
+
+        for y in range(0, 8):
+            for x in range(0, 8):
+                self.board[x][y] = UNOCCUPIED
 
         self.board[3][3] = WHITE
         self.board[4][4] = WHITE
@@ -53,33 +183,28 @@ class Othello(Frame):
 
         self.stm = BLACK # side to move
 
-        self.createWidgets()
-        self.engine_init()
         self.gameover = False
         self.piece_ids = []
+        self.canvas.delete("piece")
+        self.canvas.delete("possible_move")
+        self.draw_board()
+        self.first = True
         self.after_idle(self.print_board)
-
-    def createWidgets(self):
-        self.line_width = 2
-        screen_width = root.winfo_screenwidth()
-        screen_height = root.winfo_screenheight()
-        board_width = min(screen_width, screen_height) * 0.6
-        board_height = board_width
-
-        pad_frame = Frame(borderwidth=0, background="light blue", width=board_width, height=board_height)
-        #pad_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=20)
-        pad_frame.grid(row=0, column=0, sticky="nsew")
-
-        self.canvas = Canvas(root, width=board_width, height=board_height, bg="darkgreen")
-        set_aspect(self.canvas, pad_frame, aspect_ratio=1.0/1.0)
-
-        self.canvas.bind("<Configure>", self.on_resize)
-        self.canvas.grid(row=0, column=0, sticky=N + S + E + W)
-        self.rowconfigure(0, weight=1)
-        self.columnconfigure(0, weight=1)
-
-        self.canvas.bind("<Button-1>", self.clicked)
-        self.canvas.bind("<Button-3>", self.rclicked)
+        self.player = [HUMAN, self.settings["opponent"]]
+        if not self.engine_active:
+            return
+        self.command("quit\n")
+        # allow 5 seconds for engine process to end            
+        i = 0
+        while True:
+            if self.p.poll() is not None: 
+                break                
+            i += 1
+            if i > 20:         
+                print "engine has not terminated after quit command"
+                break        
+            time.sleep(0.25)
+        self.engine_active = False
 
     def on_resize(self,event):
         self.draw_board()
@@ -162,8 +287,6 @@ class Othello(Frame):
         elif self.board[i][j] == WHITE:
             fill_colour = COLOUR[WHITE]
         elif (i, j) in self.legal_moves:
-            #if self.stm == WHITE:
-            #    return
             fill_colour = "light blue"
             adj = square_width * 0.45
             tag = "possible_move"
@@ -179,25 +302,31 @@ class Othello(Frame):
             oval_tup = (i,j,piece_id)
             self.piece_ids.append(oval_tup)
 
-    # human passes on move (only allowed if no legal moves)
-    def rclicked(self, event):
-        if self.stm != BLACK or self.gameover:
+    def pass_on_move(self, event=None):
+        if self.player[self.stm] != HUMAN or self.gameover:
             return
         if self.legal_moves == []:
-            print "no move available - PASS forced"            
-            str1 = "usermove @@@@\n"
-            self.command(str1)
+            print "no move available - PASS forced"
             self.stm = abs(self.stm - 1)
             self.print_board()
-            self.mv = ""
-            self.ct= thread.start_new_thread( self.computer_move, () ) 
-            self.after_idle(self.get_move)
+            if self.player[self.stm] == COMPUTER:
+                str1 = "usermove @@@@\n"
+                self.command(str1)
+
+                self.mv = ""
+                self.ct= thread.start_new_thread( self.computer_move, () ) 
+                self.after_idle(self.get_move)
             return
+        print "Can't pass - legal moves are available"
+
+    # human passes on move (only allowed if no legal moves)
+    def rclicked(self, event):
+        self.pass_on_move()
 
     # process humans move (black)
     def clicked(self, event):
-        global mc
-        if self.stm != BLACK or self.gameover:
+
+        if self.player[self.stm] != HUMAN or self.gameover:
             return
 
         board_width, board_height, x_offset, y_offset, border_size_w, border_size_h = self.get_board_size()
@@ -213,7 +342,7 @@ class Othello(Frame):
 
         if self.board[x][y] != UNOCCUPIED:
             return
-
+ 
         # No legal moves
         if self.legal_moves == []:
             return
@@ -226,25 +355,42 @@ class Othello(Frame):
         for incx, incy in [(-1, 0), (-1, -1), (0, -1), (1, -1), (1,0), (1, 1), (0, 1), (-1, 1)]:
             self.flip(x, y, incx, incy, self.stm)
 
+        self.stm = abs(self.stm - 1)
+        self.print_board()
+        self.canvas.update_idletasks()
+
         # convert move from board co-ordinates to othello format (e.g. 3, 5 goes to 'd6')
         l = "abcdefgh"[x]
         n = y + 1
         move = l + str(n)
         print "move:", move
-        str1 = "usermove " + move + "\n"
-        # send human move to engine
-        self.command(str1)
-        if mc == 0:
-            self.command('go\n')
-            mc = 1
 
-        self.stm = abs(self.stm - 1)
-        self.print_board()
-        self.canvas.update_idletasks()
-        self.mv = ""
+        # start engine if needed
+        if self.player[self.stm] == COMPUTER and not self.engine_active:
+            self.engine_init()
+            if not self.engine_active:
+                print "Error starting engine"
+                # failed to init so switch opponent to human
+                self.player[self.stm] = HUMAN
+ 
+        # engine OK - send move
+        if self.player[self.stm] == COMPUTER:
+            str1 = "usermove " + move + "\n"
+            # send human move to engine
+            self.command(str1)
+            # if it is the engines first move in the game then we need to send the go command
+            if self.first:
+                self.command('go\n')
+                self.first = False
+
         self.gameover = self.check_for_gameover()
         if self.gameover:
             return
+        if self.player[self.stm] == HUMAN:
+            return
+
+        # Computers move
+        self.mv = ""
         self.ct= thread.start_new_thread( self.computer_move, () ) 
         self.after_idle(self.get_move)
         return
@@ -266,6 +412,11 @@ class Othello(Frame):
        return False
 
     def print_board(self):
+       #print "self.master.winfo_width()=",self.master.winfo_width()
+       #print "self.master.winfo_height()=",self.master.winfo_height()
+       #for item in self.pad_frame.root.grid_slaves():
+       #    print "item=",item
+
        #tagged = self.canvas.find_withtag("possible_move")
        #for t in tagged:
        #    self.canvas.delete(t)
@@ -380,11 +531,30 @@ class Othello(Frame):
 
     def engine_init(self):
         print "Initialising Engine"
-        this_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-        path = this_dir + os.sep + "edax.sh"        
+        self.engine_active = False
+        #this_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+        #path = this_dir + os.sep + "edax.sh"  
+        path = self.settings["enginepath"]
+        if not os.path.exists(path):
+            print "Error enginepath does not exist"
+            return
+        print "path=",path
 
-        p = subprocess.Popen(path, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        #
+        # change the working directory to that of the engine before starting it
+        #
+        orig_cwd = os.getcwd()
+        print "current working directory is", orig_cwd        
+        engine_wdir = os.path.dirname(path)
+        os.chdir(engine_wdir)
+        print "working directory changed to" ,os.getcwd()
+
+        p = subprocess.Popen([path,"-xboard", "-n", "1"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.p = p
+
+        os.chdir(orig_cwd)
+        print "current working directory restored back to", os.getcwd()
+
         # check process is running
         i = 0
         while (p.poll() is not None):            
@@ -395,8 +565,9 @@ class Othello(Frame):
             time.sleep(0.25)        
 
         # start thread to read stdout
-        self.op = []       
-        self.soutt = thread.start_new_thread( self.read_stdout, () )
+        self.op = []
+        if self.soutt is None:
+            self.soutt = thread.start_new_thread( self.read_stdout, () )
         #self.command('xboard\n')
         self.command('protover 2\n')
 
@@ -416,7 +587,7 @@ class Othello(Frame):
             if response_ok:
                 break            
             i += 1
-            if i > 12:                
+            if i > 60:                
                 print "Error - no response from engine"
                 sys.exit(1)
             time.sleep(0.25)
@@ -424,6 +595,7 @@ class Othello(Frame):
         self.command('variant reversi\n')
         #self.command('st 6\n')
         self.command('sd 4\n')
+        self.engine_active = True
 
     def computer_move(self):
         # Wait for move from engine
@@ -502,16 +674,55 @@ def set_aspect(content_frame, pad_frame, aspect_ratio):
             desired_width = int(event.height * aspect_ratio)
 
         # place the window, giving it an explicit size
-        content_frame.place(in_=pad_frame, x=0, y=0, 
+        #content_frame.place(in_=pad_frame, x=0, y=0, 
+        #    width=desired_width, height=desired_height)
+        content_frame.place(in_=pad_frame, x=(event.width - desired_width) / 2, y=(event.height - desired_height) / 2, 
             width=desired_width, height=desired_height)
-
     pad_frame.bind("<Configure>", enforce_aspect_ratio)
 
+import tkSimpleDialog
+class PreferencesDialog(tkSimpleDialog.Dialog):
+    def __init__(self, parent, master):
+        PreferencesDialog.parent = parent
+        tkSimpleDialog.Dialog.__init__(self, master)
+
+    def body(self, master):
+        self.rb = IntVar()
+        self.rb.set(PreferencesDialog.parent.player[WHITE])
+        Label(master, text="Opponent:").grid(row=0)
+        Radiobutton(master, text="Human",pady = 20, variable=self.rb, value=HUMAN, state=NORMAL).grid(row=0, column=1)
+
+        enginepath = PreferencesDialog.parent.settings["enginepath"]
+        if os.path.exists(enginepath):
+            state = NORMAL
+        else:
+            state = DISABLED
+        self.comprb = Radiobutton(master, text="Engine", pady = 20, variable=self.rb, value=COMPUTER, state=state).grid(row=0, column=2)
+        #self.comprb.config(state=NORMAL)
+        Label(master, text="Engine Path:").grid(row=1)
+        Button(master, text="Browse", command=self.get_engine_path).grid(row=1, column=2)
+
+        self.v = StringVar()
+        self.v.set(enginepath)
+        self.e1 = Entry(master, textvariable=self.v)
+
+        self.e1.grid(row=1, column=1)
+        return self.e1 # initial focus
+
+    def apply(self):
+        PreferencesDialog.parent.settings["opponent"] = self.rb.get()
+        PreferencesDialog.parent.settings["enginepath"] = self.e1.get()
+        self.result = 1
+        return
+
+    def get_engine_path(self): 
+        filename = "s"
+        filename = askopenfilename()
+        self.v.set(filename)
+
 root = Tk()
-#root.resizable(width=FALSE, height=FALSE)
-#root.geometry('{}x{}'.format(900, 900))
-root.aspect(1,1,1,1)
 app = Othello(root)
-app.master.title('OthelloTk')
+#root.aspect(809,642,809, 642)
+#app.master.title('OthelloTk')
 app.mainloop()
 
