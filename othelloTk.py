@@ -39,31 +39,32 @@ class Othello(Frame):
     def __init__(self, master):
         Frame.__init__(self, master)
 
-        self.othellopath = os.path.expanduser("~") + "/.othelloTk"
-
-        if not os.path.exists(self.othellopath):
-            try:
-                os.makedirs(self.othellopath)
-            except OSError, exc:                
-                print "Error - unable to create .othelloTk folder"
-                sys.exit(1)
-
-        # set default values used at first run
-        self.settings = {
-                         "version": "0.0.1",
+        # default values for settings
+        settings_defaults = {
                          "enginepath": "",
                          "opponent": HUMAN
                         }
 
+        self.othellopath = os.path.expanduser("~") + "/.othelloTk"
         self.settings_filepath = os.path.join (self.othellopath, "settings.json")
-        # create settings file as ~/.othelloTk/settings.json if first run
-        if not os.path.exists(self.settings_filepath):
-            with open(self.settings_filepath, 'w') as outfile:
-                json.dump(self.settings, outfile, indent=4)
-
+        settings_ok = False
         # read settings from file
-        with open(self.settings_filepath) as settings_file:
-            self.settings = json.load(settings_file)
+        if os.path.exists(self.settings_filepath):
+            print "attempting to read settings from file",self.settings_filepath
+            with open(self.settings_filepath) as settings_file:
+                settings_json = json.load(settings_file)
+            # check all keys present
+            settings_ok = True
+            for key in settings_defaults:
+                if key not in settings_json.keys():
+                    print "key", key, "is missing"
+                    settings_ok = False
+        if settings_ok:
+            print "Using settings from",self.settings_filepath
+            self.settings = settings_json
+        else:
+            print "Using default settings (unable to get settings from file)"
+            self.settings = settings_defaults
 
         # make resizeable
         self.grid(sticky=N + S + E + W) 
@@ -150,6 +151,14 @@ class Othello(Frame):
             d = PreferencesDialog(self, self.master)
             # save settings to file
             if d.result is not None:
+                # create ~/.othelloTk folder if it doesn't exist
+                if not os.path.exists(self.othellopath):
+                    try:
+                        os.makedirs(self.othellopath)
+                    except OSError, exc:                
+                        print "Error - unable to create ~/.othelloTk folder"
+                        sys.exit(1)
+                # write to ~/.othelloTk/settings.json
                 with open(self.settings_filepath, 'w') as outfile:
                     json.dump(self.settings, outfile, indent=4)
             return
@@ -595,6 +604,9 @@ class Othello(Frame):
         self.command('variant reversi\n')
         #self.command('st 6\n')
         self.command('sd 4\n')
+        #sd = "sd " + str(self.settings["searchdepth"]) + "\n"
+        #print "setting search depth:",sd
+        #self.command(sd)
         self.engine_active = True
 
     def computer_move(self):
@@ -683,42 +695,49 @@ def set_aspect(content_frame, pad_frame, aspect_ratio):
 import tkSimpleDialog
 class PreferencesDialog(tkSimpleDialog.Dialog):
     def __init__(self, parent, master):
-        PreferencesDialog.parent = parent
+        self.mainapp = parent
         tkSimpleDialog.Dialog.__init__(self, master)
 
     def body(self, master):
         self.rb = IntVar()
-        self.rb.set(PreferencesDialog.parent.player[WHITE])
-        Label(master, text="Opponent:").grid(row=0)
-        Radiobutton(master, text="Human",pady = 20, variable=self.rb, value=HUMAN, state=NORMAL).grid(row=0, column=1)
+        self.rb.set(self.mainapp.settings["opponent"])
+        Label(master, text="Opponent:").grid(row=0, sticky=W)
+        Radiobutton(master, text="Human", variable=self.rb, value=HUMAN, state=NORMAL).grid(row=0, column=1, sticky=W)
 
-        enginepath = PreferencesDialog.parent.settings["enginepath"]
+        enginepath = self.mainapp.settings["enginepath"]
         if os.path.exists(enginepath):
             state = NORMAL
         else:
             state = DISABLED
-        self.comprb = Radiobutton(master, text="Engine", pady = 20, variable=self.rb, value=COMPUTER, state=state).grid(row=0, column=2)
+        self.comprb = Radiobutton(master, text="Engine", variable=self.rb, value=COMPUTER, state=state)
+        self.comprb.grid(row=1, column=1, sticky=W)
         #self.comprb.config(state=NORMAL)
-        Label(master, text="Engine Path:").grid(row=1)
-        Button(master, text="Browse", command=self.get_engine_path).grid(row=1, column=2)
+        Label(master, text="Engine Path:").grid(row=2, sticky=W)
+        Button(master, text="Browse", command=self.get_engine_path).grid(row=2, column=2)
 
         self.v = StringVar()
         self.v.set(enginepath)
-        self.e1 = Entry(master, textvariable=self.v)
+        self.e1 = Entry(master, textvariable=self.v, width=30)
 
-        self.e1.grid(row=1, column=1)
+        self.e1.grid(row=2, column=1, sticky=W, padx=10, pady=10)
+
+        #Label(master, text="Search Depth:").grid(row=2)
+
         return self.e1 # initial focus
 
     def apply(self):
-        PreferencesDialog.parent.settings["opponent"] = self.rb.get()
-        PreferencesDialog.parent.settings["enginepath"] = self.e1.get()
+        self.mainapp.settings["opponent"] = self.rb.get()
+        self.mainapp.settings["enginepath"] = self.e1.get()
         self.result = 1
         return
 
-    def get_engine_path(self): 
-        filename = "s"
+    def get_engine_path(self):
         filename = askopenfilename()
         self.v.set(filename)
+        if os.path.exists(filename):
+            self.comprb.configure(state=NORMAL)
+        else:
+            self.comprb.configure(state=DISABLED)
 
 root = Tk()
 app = Othello(root)
