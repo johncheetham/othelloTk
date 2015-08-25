@@ -17,13 +17,13 @@
 #   along with othelloTk.  If not, see <http://www.gnu.org/licenses/>.
 #   
 
-from Tkinter import *
-from tkMessageBox import *
-from tkFileDialog import *
+
+import Tkinter as tk
+import dialogs as dlg
 import subprocess
 import thread
 import time
-import inspect
+#import inspect
 import os
 import shlex
 import json
@@ -35,9 +35,9 @@ COLOUR=("black", "white")
 HUMAN=0
 COMPUTER=1
 
-class Othello(Frame):
+class Othello(tk.Frame):
     def __init__(self, master):
-        Frame.__init__(self, master)
+        tk.Frame.__init__(self, master)
 
         # default values for settings
         settings_defaults = {
@@ -67,7 +67,7 @@ class Othello(Frame):
             self.settings = settings_defaults
 
         # make resizeable
-        self.grid(sticky=N + S + E + W) 
+        self.grid(sticky=tk.N + tk.S + tk.E + tk.W) 
         master.minsize(width=300, height=300)
         self.master = master
         self.master.title('OthelloTk')
@@ -110,10 +110,10 @@ class Othello(Frame):
         board_height = board_width
 
         #pad_frame = Frame(self, borderwidth=0, background="light blue", width=board_width, height=board_height)
-        pad_frame = Frame(self, borderwidth=0, width=board_width, height=board_height)
+        pad_frame = tk.Frame(self, borderwidth=0, width=board_width, height=board_height)
         pad_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=15)
 
-        self.canvas = Canvas(pad_frame, width=board_width, height=board_height, bg="darkgreen")
+        self.canvas = tk.Canvas(pad_frame, width=board_width, height=board_height, bg="darkgreen")
         set_aspect(self.canvas, pad_frame, aspect_ratio=1.0)
 
         self.canvas.bind("<Configure>", self.on_resize)
@@ -128,13 +128,13 @@ class Othello(Frame):
         #l.grid(row=0, column=0, sticky="w")
 
         # menubar
-        self.master.option_add('*tearOff', FALSE)
-        menubar = Menu(self.master)
+        self.master.option_add('*tearOff', tk.FALSE)
+        menubar = tk.Menu(self.master)
 
-        menu_file = Menu(menubar)
-        menu_edit = Menu(menubar)
-        menu_play = Menu(menubar)
-        #menu_help = Menu(menubar)
+        menu_file = tk.Menu(menubar)
+        menu_edit = tk.Menu(menubar)
+        menu_play = tk.Menu(menubar)
+        #menu_help = tk.Menu(menubar)
         menubar.add_cascade(menu=menu_file, label='File')
         menubar.add_cascade(menu=menu_edit, label='Edit')
         menubar.add_cascade(menu=menu_play, label='Play')
@@ -148,7 +148,7 @@ class Othello(Frame):
                                          "This program comes with ABSOLUTELY NO WARRANTY")
 
         def preferences():
-            d = PreferencesDialog(self, self.master)
+            d = dlg.PreferencesDialog(self, self.master)
             # save settings to file
             if d.result is not None:
                 # create ~/.othelloTk folder if it doesn't exist
@@ -237,7 +237,7 @@ class Othello(Frame):
 
         square_width = board_width / 8
         square_height = board_height / 8
-        self.canvas.delete(ALL)
+        self.canvas.delete(tk.ALL)
         line_width = self.line_width
         # horizontal board lines
         x = 0
@@ -692,54 +692,9 @@ def set_aspect(content_frame, pad_frame, aspect_ratio):
             width=desired_width, height=desired_height)
     pad_frame.bind("<Configure>", enforce_aspect_ratio)
 
-import tkSimpleDialog
-class PreferencesDialog(tkSimpleDialog.Dialog):
-    def __init__(self, parent, master):
-        self.mainapp = parent
-        tkSimpleDialog.Dialog.__init__(self, master)
 
-    def body(self, master):
-        self.rb = IntVar()
-        self.rb.set(self.mainapp.settings["opponent"])
-        Label(master, text="Opponent:").grid(row=0, sticky=W)
-        Radiobutton(master, text="Human", variable=self.rb, value=HUMAN, state=NORMAL).grid(row=0, column=1, sticky=W)
 
-        enginepath = self.mainapp.settings["enginepath"]
-        if os.path.exists(enginepath):
-            state = NORMAL
-        else:
-            state = DISABLED
-        self.comprb = Radiobutton(master, text="Engine", variable=self.rb, value=COMPUTER, state=state)
-        self.comprb.grid(row=1, column=1, sticky=W)
-        #self.comprb.config(state=NORMAL)
-        Label(master, text="Engine Path:").grid(row=2, sticky=W)
-        Button(master, text="Browse", command=self.get_engine_path).grid(row=2, column=2)
-
-        self.v = StringVar()
-        self.v.set(enginepath)
-        self.e1 = Entry(master, textvariable=self.v, width=30)
-
-        self.e1.grid(row=2, column=1, sticky=W, padx=10, pady=10)
-
-        #Label(master, text="Search Depth:").grid(row=2)
-
-        return self.e1 # initial focus
-
-    def apply(self):
-        self.mainapp.settings["opponent"] = self.rb.get()
-        self.mainapp.settings["enginepath"] = self.e1.get()
-        self.result = 1
-        return
-
-    def get_engine_path(self):
-        filename = askopenfilename()
-        self.v.set(filename)
-        if os.path.exists(filename):
-            self.comprb.configure(state=NORMAL)
-        else:
-            self.comprb.configure(state=DISABLED)
-
-root = Tk()
+root = tk.Tk()
 app = Othello(root)
 #root.aspect(809,642,809, 642)
 #app.master.title('OthelloTk')
