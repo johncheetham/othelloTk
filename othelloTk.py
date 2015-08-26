@@ -86,7 +86,6 @@ class Othello(tk.Frame):
 
         self.player = [HUMAN, self.settings["opponent"]]
         self.stm = BLACK # side to move
-        self.soutt = None
         self.first = True
         self.createWidgets()
         self.gameover = False
@@ -575,8 +574,7 @@ class Othello(tk.Frame):
 
         # start thread to read stdout
         self.op = []
-        if self.soutt is None:
-            self.soutt = thread.start_new_thread( self.read_stdout, () )
+        self.soutt = thread.start_new_thread( self.read_stdout, () )
         #self.command('xboard\n')
         self.command('protover 2\n')
 
@@ -639,6 +637,9 @@ class Othello(tk.Frame):
                 line = self.p.stdout.readline()
                 #print line
                 line = line.strip()
+                if line == '':
+                    print "eof reached in read_stdout"
+                    break  
                 self.op.append(line)
             except Exception, e:
                 print "subprocess error in read_stdout:",e       
