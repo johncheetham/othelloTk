@@ -68,7 +68,7 @@ class Othello(tk.Frame):
 
         # make resizeable
         self.grid(sticky=tk.N + tk.S + tk.E + tk.W) 
-        master.minsize(width=300, height=300)
+        master.minsize(width=300, height=200)
         self.master = master
         self.master.title('OthelloTk')
         row = []
@@ -89,6 +89,7 @@ class Othello(tk.Frame):
         self.first = True
         self.createWidgets()
         self.gameover = False
+        self.endmsg = None
         self.engine_active = False
         self.piece_ids = []
         self.after_idle(self.print_board)
@@ -108,23 +109,23 @@ class Othello(tk.Frame):
         board_width = min(screen_width, screen_height) * 0.6
         board_height = board_width
 
-        #pad_frame = Frame(self, borderwidth=0, background="light blue", width=board_width, height=board_height)
-        pad_frame = tk.Frame(self, borderwidth=0, width=board_width, height=board_height)
-        pad_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=15)
+        gap = board_width / 25
+        info_bwidth = 10
+        pad_frame_border = 5
+        pad_frame_width = board_width + board_width / 2 + gap + info_bwidth + pad_frame_border*2
+        pad_frame = tk.Frame(self, borderwidth=pad_frame_border, width=pad_frame_width, height=board_height, bg="light blue", relief=tk.RIDGE)
+        pad_frame.grid(row=0, column=0, sticky="nsew")
 
-        self.canvas = tk.Canvas(pad_frame, width=board_width, height=board_height, bg="darkgreen")
-        set_aspect(self.canvas, pad_frame, aspect_ratio=1.0)
+        self.canvas = tk.Canvas(pad_frame, borderwidth=0,width=board_width, height=board_height, bg="darkgreen")
+        info_canvas_width = board_width / 2
+        info_canvas = tk.Canvas(pad_frame, borderwidth=info_bwidth, background="DarkSlateBlue", width=info_canvas_width, height=board_height, relief=tk.RIDGE)
+        set_aspect(self.canvas, info_canvas, pad_frame, aspect_ratio=1.0, gap=gap, bordersize=pad_frame_border)
+        self.info_canvas = info_canvas
 
+        info_canvas.bind("<Configure>", self.info_resize)
         self.canvas.bind("<Configure>", self.on_resize)
-
         self.canvas.bind("<Button-1>", self.clicked)
         self.canvas.bind("<Button-3>", self.rclicked)
-
-        #info_frame = Frame(self, borderwidth=0, background="light blue", width=board_width / 2, height=board_height)
-        #info_frame.grid(row=0, column=1, sticky="nsew")
-
-        #l = Label(info_frame, text = "* Black", bg="light blue", font=("Helvetica", -32, "italic"))
-        #l.grid(row=0, column=0, sticky="w")
 
         # menubar
         self.master.option_add('*tearOff', tk.FALSE)
@@ -174,6 +175,33 @@ class Othello(tk.Frame):
         self.bind_all("<Control-q>", self.quit_program)
         self.bind_all("<Control-n>", self.new_game)
         self.bind_all("<Control-p>", self.pass_on_move)
+
+    def info_resize(self, event=None):
+        self.info_canvas.delete(tk.ALL)
+        fontsize = int((self.info_canvas.winfo_width() * 0.1) * -1)
+        x = self.info_canvas.winfo_width()  * 0.5
+        y = x / 2
+        txt = "BLACK " + str(self.count(BLACK)) + "\nWHITE " + str(self.count(WHITE))
+        self.info_canvas.create_text(x, y, font=("Courier", fontsize, "bold"), text=txt, fill="light blue", tags="info")
+
+        # white
+        w = self.info_canvas.winfo_width()
+        x0 = w * 0.14
+        y0 = y * 1.1         
+        x1 = x0 + w * 0.05
+        y1 = y0 + w * 0.05
+        if self.stm == WHITE:
+            self.info_canvas.create_oval(x0, y0, x1, y1, fill="light blue", tags="info")
+        else:
+            # black
+            y0 = y0 * 0.6
+            y1 = y0 + w * 0.05
+            self.info_canvas.create_oval(x0, y0, x1, y1, fill="light blue", tags="info")
+        
+        if self.endmsg is not None:
+            x = self.info_canvas.winfo_width()  * 0.5
+            y = self.info_canvas.winfo_height()  * 0.5
+            self.info_canvas.create_text(x, y, font=("Courier", fontsize, "bold"), text=self.endmsg, fill="light blue", tags="info")
 
     def quit_program(self, event=None):
         self.quit()
@@ -407,15 +435,18 @@ class Othello(tk.Frame):
     def check_for_gameover(self):
        if self.get_legal_moves(BLACK) == [] and self.get_legal_moves(WHITE) == []:
            self.gameover = True
-           print "Game Over - ",
+           msg = "Game Over\n"
            black_count = self.count(BLACK)
            white_count = self.count(WHITE)
            if black_count > white_count:
-               print "Black wins"
+               msg += "Black wins"
            elif white_count > black_count:
-               print "White Wins"
+               msg += "White Wins"
            else:
-               print "Draw"
+               msg += "Draw"
+           print msg
+           self.endmsg = msg
+           self.info_resize()
            return True
        return False
 
@@ -458,6 +489,7 @@ class Othello(tk.Frame):
            print "white to move"
        print "Legal moves:",self.get_legal_moves(self.stm)
        print
+       self.info_resize()
 
        #ids = self.canvas.find_all()
        #for id in ids:
@@ -667,7 +699,7 @@ class Othello(tk.Frame):
             xx = xx + incx
             yy = yy + incy
 
-def set_aspect(content_frame, pad_frame, aspect_ratio):
+def set_aspect(content_frame, info_frame, pad_frame, aspect_ratio, gap, bordersize):
     # a function which places a frame within a containing frame, and
     # then forces the inner frame to keep a specific aspect ratio
 
@@ -687,17 +719,30 @@ def set_aspect(content_frame, pad_frame, aspect_ratio):
             desired_width = int(event.height * aspect_ratio)
 
         # place the window, giving it an explicit size
+        desired_width = desired_width * 0.95
+        desired_height = desired_height * 0.95
+
+        info_frame_width = desired_width / 2
+        tot_width = desired_width + info_frame_width + gap
         #content_frame.place(in_=pad_frame, x=0, y=0, 
         #    width=desired_width, height=desired_height)
-        content_frame.place(in_=pad_frame, x=(event.width - desired_width) / 2, y=(event.height - desired_height) / 2, 
+        #print "event.width/tot_width=",event.width,tot_width
+        x = (event.width - tot_width) / 2
+        if x < 0:
+            x = 0
+        content_frame.place(in_=pad_frame, x=x, y=(event.height - desired_height) / 2 - bordersize, 
             width=desired_width, height=desired_height)
+        x = x + desired_width + gap
+        info_frame.place(in_=pad_frame, x=x, y=(event.height - desired_height) / 2 - bordersize, 
+            width=desired_width / 2, height=desired_height)
+        #info_frame.place(in_=pad_frame, x=(event.width - tot_width) / 2 + desired_width, y=0, 
+        #    width=desired_width / 2, height=desired_height)
+        #content_frame.place(in_=pad_frame, x=(event.width - desired_width) / 2, y=(event.height - desired_height) / 2, 
+        #    width=desired_width, height=desired_height)
     pad_frame.bind("<Configure>", enforce_aspect_ratio)
-
-
 
 root = tk.Tk()
 app = Othello(root)
-#root.aspect(809,642,809, 642)
-#app.master.title('OthelloTk')
+root.aspect(894, 600, 16, 10)
 app.mainloop()
 
