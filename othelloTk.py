@@ -27,6 +27,7 @@ import time
 import os
 import shlex
 import json
+import tkMessageBox
 
 BLACK=0
 WHITE=1
@@ -155,17 +156,17 @@ class Othello(tk.Frame):
         menu_file = tk.Menu(menubar)
         menu_edit = tk.Menu(menubar)
         menu_play = tk.Menu(menubar)
-        #menu_help = tk.Menu(menubar)
+        menu_help = tk.Menu(menubar)
         menubar.add_cascade(menu=menu_file, label='File')
         menubar.add_cascade(menu=menu_edit, label='Edit')
         menubar.add_cascade(menu=menu_play, label='Play')
-        #menubar.add_cascade(menu=menu_help, label='Help')
+        menubar.add_cascade(menu=menu_help, label='Help')
 
         def about():
-            showinfo("About OthelloTk", "OthelloTk\n\n0.0.1\n\n"
-                                        "A GUI to play Othello against Edax.\n\n"
-                                         "Copyright (c) 2015 John Cheetham\n\n"
-                                         "http://johncheetham.com\n\n" 
+            tkMessageBox.showinfo("About OthelloTk", "OthelloTk",
+                                        detail="0.0.1\n\nA GUI to play Othello against Edax.\n\n"
+                                         "Copyright (c) 2015 John Cheetham\n"
+                                         "http://www.johncheetham.com\n\n" 
                                          "This program comes with ABSOLUTELY NO WARRANTY")
 
         def preferences():
@@ -189,7 +190,7 @@ class Othello(tk.Frame):
         menu_file.add_command(label='Quit', command=self.quit_program, underline=0, accelerator="Ctrl+Q")
         menu_edit.add_command(label='Preferences', command=preferences)
         menu_play.add_command(label='Pass', command=self.pass_on_move, underline=0, accelerator="Ctrl+P")
-        #menu_help.add_command(label='About', command=about, underline=0)
+        menu_help.add_command(label='About', command=about, underline=0)
         self.master.config(menu=menubar)
 
         # accelerator keys
@@ -223,6 +224,7 @@ class Othello(tk.Frame):
         self.lbl_black.config(font=("Courier", fontsize, "bold"), padx=width * 0.05)
         self.lbl_white.config(font=("Courier", fontsize, "bold"), padx=width * 0.05)
 
+        self.eog_text.set(" ")
         if self.gameover:
             self.eog_text.set(self.winner_msg)
             self.lbl_eog.config(font=("Courier", fontsize / 2, "bold"), padx=width * 0.1, pady=width * 0.1)
