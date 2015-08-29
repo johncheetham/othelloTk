@@ -89,7 +89,6 @@ class Othello(tk.Frame):
         self.first = True
         self.createWidgets()
         self.gameover = False
-        self.endmsg = None
         self.engine_active = False
         self.piece_ids = []
         self.after_idle(self.print_board)
@@ -117,12 +116,34 @@ class Othello(tk.Frame):
         pad_frame.grid(row=0, column=0, sticky="nsew")
 
         self.canvas = tk.Canvas(pad_frame, borderwidth=0,width=board_width, height=board_height, bg="darkgreen")
-        info_canvas_width = board_width / 2
-        info_canvas = tk.Canvas(pad_frame, borderwidth=info_bwidth, background="DarkSlateBlue", width=info_canvas_width, height=board_height, relief=tk.RIDGE)
-        set_aspect(self.canvas, info_canvas, pad_frame, aspect_ratio=1.0, gap=gap, bordersize=pad_frame_border)
-        self.info_canvas = info_canvas
 
-        info_canvas.bind("<Configure>", self.info_resize)
+        # information frame
+        info_frame_width = board_width / 2
+        info_frame = tk.Frame(pad_frame, borderwidth=info_bwidth, background="DarkSlateBlue", width=info_frame_width, height=board_height, relief=tk.RIDGE)
+        set_aspect(self.canvas, info_frame, pad_frame, aspect_ratio=1.0, gap=gap, bordersize=pad_frame_border)
+        self.info_frame = info_frame
+
+        # scores
+        self.lbl_score_black = tk.StringVar()
+        self.lbl_score_white = tk.StringVar()
+        self.lbl_score_black.set("* Black 2")
+        self.lbl_score_white.set("  White 2")
+
+        self.lbl_black = tk.Label(info_frame, textvariable=self.lbl_score_black, bg="DarkSlateBlue", fg="light blue")
+        self.lbl_white = tk.Label(info_frame, textvariable=self.lbl_score_white, bg="DarkSlateBlue", fg="light blue")
+        self.lbl_black.grid(row=0, column=0, sticky="n")
+        self.lbl_white.grid(row=1, column=0, sticky="n")
+
+        # end of game message
+        self.eog_text = tk.StringVar()
+        self.eog_text.set(" ")
+        self.lbl_eog = tk.Label(info_frame, textvariable=self.eog_text, bg="DarkSlateBlue", fg="light blue")
+        self.lbl_eog.grid(row=2, column=0, sticky="n")
+
+        def info_resize(event):
+            self.info_draw()
+
+        info_frame.bind("<Configure>", info_resize)
         self.canvas.bind("<Configure>", self.on_resize)
         self.canvas.bind("<Button-1>", self.clicked)
         self.canvas.bind("<Button-3>", self.rclicked)
@@ -176,32 +197,35 @@ class Othello(tk.Frame):
         self.bind_all("<Control-n>", self.new_game)
         self.bind_all("<Control-p>", self.pass_on_move)
 
-    def info_resize(self, event=None):
-        self.info_canvas.delete(tk.ALL)
-        fontsize = int((self.info_canvas.winfo_width() * 0.1) * -1)
-        x = self.info_canvas.winfo_width()  * 0.5
-        y = x / 2
-        txt = "BLACK " + str(self.count(BLACK)) + "\nWHITE " + str(self.count(WHITE))
-        self.info_canvas.create_text(x, y, font=("Courier", fontsize, "bold"), text=txt, fill="light blue", tags="info")
+    def info_draw(self):
+        width = self.info_frame.winfo_width()
+        fontsize = int((width * 0.1) * -1)
 
-        # white
-        w = self.info_canvas.winfo_width()
-        x0 = w * 0.14
-        y0 = y * 1.1         
-        x1 = x0 + w * 0.05
-        y1 = y0 + w * 0.05
-        if self.stm == WHITE:
-            self.info_canvas.create_oval(x0, y0, x1, y1, fill="light blue", tags="info")
+        bstm = "  "
+        btext = "Black "
+        bscore = str(self.count(BLACK))
+        if len(bscore) < 2:
+            bscore = " " + bscore
+
+        wstm = "  "
+        wtext = "White "
+        wscore = str(self.count(WHITE))
+        if len(wscore) < 2:
+            wscore = " " + wscore
+
+        if self.stm == BLACK:
+            bstm = "* "
         else:
-            # black
-            y0 = y0 * 0.6
-            y1 = y0 + w * 0.05
-            self.info_canvas.create_oval(x0, y0, x1, y1, fill="light blue", tags="info")
-        
-        if self.endmsg is not None:
-            x = self.info_canvas.winfo_width()  * 0.5
-            y = self.info_canvas.winfo_height()  * 0.5
-            self.info_canvas.create_text(x, y, font=("Courier", fontsize, "bold"), text=self.endmsg, fill="light blue", tags="info")
+            wstm = "* "
+
+        self.lbl_score_black.set(bstm+btext+bscore)
+        self.lbl_score_white.set(wstm+wtext+wscore)
+        self.lbl_black.config(font=("Courier", fontsize, "bold"), padx=width * 0.05)
+        self.lbl_white.config(font=("Courier", fontsize, "bold"), padx=width * 0.05)
+
+        if self.gameover:
+            self.eog_text.set(self.winner_msg)
+            self.lbl_eog.config(font=("Courier", fontsize / 2, "bold"), padx=width * 0.1, pady=width * 0.1)
 
     def quit_program(self, event=None):
         self.quit()
@@ -435,18 +459,16 @@ class Othello(tk.Frame):
     def check_for_gameover(self):
        if self.get_legal_moves(BLACK) == [] and self.get_legal_moves(WHITE) == []:
            self.gameover = True
-           msg = "Game Over\n"
            black_count = self.count(BLACK)
            white_count = self.count(WHITE)
            if black_count > white_count:
-               msg += "Black wins"
+               self.winner_msg = "Game Over - Black wins"
            elif white_count > black_count:
-               msg += "White Wins"
+               self.winner_msg = "Game Over - White Wins"
            else:
-               msg += "Draw"
-           print msg
-           self.endmsg = msg
-           self.info_resize()
+               self.winner_msg = "Game Over - Match Drawn"
+           print self.winner_msg
+           self.info_draw()
            return True
        return False
 
@@ -489,7 +511,7 @@ class Othello(tk.Frame):
            print "white to move"
        print "Legal moves:",self.get_legal_moves(self.stm)
        print
-       self.info_resize()
+       self.info_draw()
 
        #ids = self.canvas.find_all()
        #for id in ids:
