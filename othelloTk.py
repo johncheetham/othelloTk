@@ -28,6 +28,7 @@ import os
 import shlex
 import json
 import tkMessageBox
+import base64
 
 BLACK=0
 WHITE=1
@@ -91,6 +92,7 @@ class Othello(tk.Frame):
         self.createWidgets()
         self.gameover = False
         self.engine_active = False
+        self.movecount = 0
         self.piece_ids = []
         self.after_idle(self.print_board)
 
@@ -120,7 +122,7 @@ class Othello(tk.Frame):
 
         # information frame
         info_frame_width = board_width / 2
-        info_frame = tk.Frame(pad_frame, borderwidth=info_bwidth, background="DarkSlateBlue", width=info_frame_width, height=board_height, relief=tk.RIDGE)
+        info_frame = tk.Frame(pad_frame, borderwidth=info_bwidth, padx=20,background="DarkSlateBlue", width=info_frame_width, height=board_height, relief=tk.RIDGE)
         set_aspect(self.canvas, info_frame, pad_frame, aspect_ratio=1.0, gap=gap, bordersize=pad_frame_border)
         self.info_frame = info_frame
 
@@ -143,6 +145,15 @@ class Othello(tk.Frame):
 
         def info_resize(event):
             self.info_draw()
+
+        scrollbar = tk.Scrollbar(info_frame, orient=tk.VERTICAL)
+        self.listbox = tk.Listbox(info_frame, yscrollcommand=scrollbar.set)
+        scrollbar.grid(row=3, column=1, sticky="wns")
+        self.listbox.grid(row=3, column=0, sticky="ewns")
+        scrollbar.config(command=self.listbox.yview)
+
+        info_frame.columnconfigure(0, weight=10)
+        info_frame.columnconfigure(1, weight=0)
 
         info_frame.bind("<Configure>", info_resize)
         self.canvas.bind("<Configure>", self.on_resize)
@@ -229,6 +240,10 @@ class Othello(tk.Frame):
             self.eog_text.set(self.winner_msg)
             self.lbl_eog.config(font=("Courier", fontsize / 2, "bold"), padx=width * 0.1, pady=width * 0.1)
 
+        #self.listbox.config(font=("Courier", fontsize/2, "bold"), fg="black", bg="light blue", height=10, width=20)
+        self.listbox.config(font=("Courier", fontsize/2), fg="black", bg="light blue", height=10, width=20)
+        self.info_frame.config(padx=fontsize*-1)
+
     def quit_program(self, event=None):
         self.quit()
 
@@ -246,6 +261,8 @@ class Othello(tk.Frame):
         self.stm = BLACK # side to move
 
         self.gameover = False
+        self.listbox.delete(0, tk.END)
+        self.movecount = 0
         self.piece_ids = []
         self.canvas.delete("piece")
         self.canvas.delete("possible_move")
@@ -364,11 +381,29 @@ class Othello(tk.Frame):
             oval_tup = (i,j,piece_id)
             self.piece_ids.append(oval_tup)
 
+    def add_move_to_list(self, move):
+        # if even numbered move add it to the last line (2 moves per line)
+        # otherwise add new line
+        self.movecount += 1
+        strcnt = str(self.movecount)
+        if len(strcnt) < 2:
+            strcnt = " " + strcnt
+        strcnt = " " + strcnt + ". "
+        if self.movecount % 2 == 0:
+            item = self.listbox.get(tk.END) 
+            self.listbox.delete(tk.END)
+            item = item + "  " + strcnt + move
+            self.listbox.insert(tk.END, item)
+        else:
+            self.listbox.insert(tk.END, strcnt + move)        
+        self.listbox.yview(tk.END) # scroll list box to end
+
     def pass_on_move(self, event=None):
         if self.player[self.stm] != HUMAN or self.gameover:
             return
         if self.legal_moves == []:
             print "no move available - PASS forced"
+            self.add_move_to_list("--")
             self.stm = abs(self.stm - 1)
             self.print_board()
             if self.player[self.stm] == COMPUTER:
@@ -426,6 +461,7 @@ class Othello(tk.Frame):
         n = y + 1
         move = l + str(n)
         print "move:", move
+        self.add_move_to_list(move)
 
         # start engine if needed
         if self.player[self.stm] == COMPUTER and not self.engine_active:
@@ -577,10 +613,15 @@ class Othello(tk.Frame):
             return
         print "move:",self.mv
         mv = self.mv
+
         # pass
         if mv == "@@@@":
             self.stm = abs(self.stm - 1)
+            self.add_move_to_list("--")
             return
+
+        self.add_move_to_list(mv)
+
         # convert move to board coordinates (e.g. "d6" goes to 3, 5)
         letter = mv[0]
         num = mv[1]
