@@ -28,7 +28,7 @@ import os
 import shlex
 import json
 import tkMessageBox
-import base64
+import copy
 
 BLACK=0
 WHITE=1
@@ -79,16 +79,25 @@ class Othello(tk.Frame):
 
         self.board = []
         for i in range(0,8):
-            self.board.append(row[:])
-    
+            self.board.append(row[:])    
+
+        self.board_hist = [] 
+        for i in range(0, 64):
+            self.board_hist.append(copy.deepcopy(self.board))
+
         self.board[3][3] = WHITE
         self.board[4][4] = WHITE
         self.board[3][4] = BLACK
         self.board[4][3] = BLACK
+        self.board_hist[0] = copy.deepcopy(self.board)
 
         self.player = [HUMAN, self.settings["opponent"]]
         self.stm = BLACK # side to move
         self.first = True
+        self.movelist = []
+        self.redolist = []
+        self.lb_redolist = []
+        self.std_start_fen = "8/8/8/3Pp3/3pP3/8/8/8 w - - 0 1"
         self.createWidgets()
         self.gameover = False
         self.engine_active = False
@@ -146,11 +155,129 @@ class Othello(tk.Frame):
         def info_resize(event):
             self.info_draw()
 
+        def undo_all():
+            if self.movecount == 0:
+                print "can't undo all - already at start position"
+                return
+            self.gameover = False
+            self.command("setboard " + self.std_start_fen + "\n")
+            # get reversed list
+            self.redolist = self.movelist[::-1]
+            self.movelist = []
+            self.stm = BLACK #FIXME - shouldn't be hard coded
+            self.movecount = 0
+            self.board = copy.deepcopy(self.board_hist[0])
+            self.print_board()
+
+            self.lb_redolist = list(self.listbox.get(0, tk.END))[::-1] # get all reversed
+            self.listbox.delete(0, tk.END) # delete all
+            self.draw_board()
+
+        def undo():
+            if self.movecount == 0:
+                print "can't undo - already at start position"
+                return
+            self.gameover = False
+            # undo 2 half moves making it still humans move
+            self.command("remove\n")
+
+            for i in range(0, 2):        
+                mv = self.movelist.pop()
+                self.redolist.append(mv)
+                self.movecount -= 1
+                self.board = copy.deepcopy(self.board_hist[self.movecount])
+                self.stm = abs(self.stm - 1)
+                self.print_board()
+
+            lb_row = self.listbox.get(tk.END)
+            self.lb_redolist.append(lb_row)
+            self.listbox.delete(tk.END)
+            self.draw_board()
+
+        def redo():
+            if self.redolist == []:
+                print "no moves to redo"
+                return
+
+            self.command("force\n")
+
+            for i in range(0, 2):
+                mv = self.redolist.pop()
+                self.movelist.append(mv)
+                self.command("usermove " + mv + "\n")
+                self.movecount += 1
+                self.board = copy.deepcopy(self.board_hist[self.movecount])
+                self.stm = abs(self.stm - 1)
+                self.print_board()            
+                self.gameover = self.check_for_gameover()
+                if self.gameover:
+                    break
+            self.listbox.insert(tk.END, self.lb_redolist.pop())
+            self.first = True
+            self.draw_board()
+
+        def redo_all():
+            if self.redolist == []:
+                print "can't redo all - no moves to redo"
+                return
+
+            self.command("force\n")
+
+            rdlen = len(self.redolist)
+            for i in range(0, rdlen):
+                mv = self.redolist.pop()
+                self.movelist.append(mv)
+                self.command("usermove " + mv + "\n")
+                self.movecount += 1
+                self.stm = abs(self.stm - 1)
+
+            self.board = copy.deepcopy(self.board_hist[self.movecount])
+            self.print_board()
+            self.gameover = self.check_for_gameover()
+            while self.lb_redolist != []:
+                self.listbox.insert(tk.END, self.lb_redolist.pop())
+            self.first = True
+            self.draw_board()
+
         scrollbar = tk.Scrollbar(info_frame, orient=tk.VERTICAL)
         self.listbox = tk.Listbox(info_frame, yscrollcommand=scrollbar.set)
         scrollbar.grid(row=3, column=1, sticky="wns")
         self.listbox.grid(row=3, column=0, sticky="ewns")
         scrollbar.config(command=self.listbox.yview)
+
+        self.bbox = tk.Frame(info_frame, bg="Blue", relief=tk.RIDGE)
+        self.bbox.grid(row=4, column=0)
+
+        # U+219e left double headed (8606)
+        # << left all U+21E4 (8676)
+        self.b1 = tk.Button(self.bbox, text=unichr(8676), command=undo_all)
+        self.b1.grid(row=0, column=0)
+
+        # U+21FD open headed (8701)
+        # U+2B05 solid (11013)
+        # < left arrow U+2190 = 8592 in decimal
+        self.b2= tk.Button(self.bbox, text=unichr(8592), command=undo)
+        self.b2.grid(row=0, column=1)
+        #self.b.config(font=("Courier", 125, "bold"), fg="red", bg="blue")
+
+        # > right arrow U+2192
+        self.b3 = tk.Button(self.bbox, text=unichr(8594), command=redo)
+        self.b3.grid(row=0, column=2)
+
+        # >> right all U+21E5
+        self.b4 = tk.Button(self.bbox, text=unichr(8677), command=redo_all)
+        self.b4.grid(row=0, column=3)
+
+        self.bbox.rowconfigure(0, weight=1)
+        self.bbox.columnconfigure(0, weight=1)
+        self.bbox.columnconfigure(1, weight=1)
+        self.bbox.columnconfigure(2, weight=1)
+        self.bbox.columnconfigure(3, weight=1)
+        info_frame.rowconfigure(0, weight=0)
+        info_frame.rowconfigure(1, weight=0)
+        info_frame.rowconfigure(2, weight=0)
+        info_frame.rowconfigure(3, weight=1)
+        info_frame.rowconfigure(4, weight=1)
 
         info_frame.columnconfigure(0, weight=10)
         info_frame.columnconfigure(1, weight=0)
@@ -240,7 +367,11 @@ class Othello(tk.Frame):
             self.eog_text.set(self.winner_msg)
             self.lbl_eog.config(font=("Courier", fontsize / 2, "bold"), padx=width * 0.1, pady=width * 0.1)
 
-        #self.listbox.config(font=("Courier", fontsize/2, "bold"), fg="black", bg="light blue", height=10, width=20)
+        self.b1.config(font=("Courier", int(fontsize * 1.0)), fg="black", bg="light blue")
+        self.b2.config(font=("Courier", int(fontsize * 1.0)), fg="black", bg="light blue")
+        self.b3.config(font=("Courier", int(fontsize * 1.0)), fg="black", bg="light blue")
+        self.b4.config(font=("Courier", int(fontsize * 1.0)), fg="black", bg="light blue")
+
         self.listbox.config(font=("Courier", fontsize/2), fg="black", bg="light blue", height=10, width=20)
         self.info_frame.config(padx=fontsize*-1)
 
@@ -384,7 +515,9 @@ class Othello(tk.Frame):
     def add_move_to_list(self, move):
         # if even numbered move add it to the last line (2 moves per line)
         # otherwise add new line
+        self.movelist.append(move)
         self.movecount += 1
+        self.board_hist[self.movecount] = copy.deepcopy(self.board)
         strcnt = str(self.movecount)
         if len(strcnt) < 2:
             strcnt = " " + strcnt
@@ -607,10 +740,9 @@ class Othello(tk.Frame):
         print "white to move"
         time.sleep(1.0)
         # if no move wait a second and try again
-        if self.mv == "":
+        while self.mv == "":
             time.sleep(1.0)
-            self.after_idle(self.get_move)
-            return
+            print "white to move"
         print "move:",self.mv
         mv = self.mv
 
@@ -620,8 +752,6 @@ class Othello(tk.Frame):
             self.add_move_to_list("--")
             return
 
-        self.add_move_to_list(mv)
-
         # convert move to board coordinates (e.g. "d6" goes to 3, 5)
         letter = mv[0]
         num = mv[1]
@@ -629,7 +759,8 @@ class Othello(tk.Frame):
         y = int(num) - 1
 
         for incx, incy in [(-1, 0), (-1, -1), (0, -1), (1, -1), (1,0), (1, 1), (0, 1), (-1, 1)]:                        
-            self.flip(x, y, incx, incy, self.stm)              
+            self.flip(x, y, incx, incy, self.stm)
+        self.add_move_to_list(mv)
         self.stm = abs(self.stm - 1)
         self.print_board()
         self.gameover = self.check_for_gameover()
