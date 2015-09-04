@@ -47,7 +47,7 @@ class Othello(tk.Frame):
                          "opponent": HUMAN
                         }
 
-        self.othellopath = os.path.expanduser("~") + "/.othelloTk"
+        self.othellopath = os.path.join(os.path.expanduser("~"), ".othelloTk")
         self.settings_filepath = os.path.join (self.othellopath, "settings.json")
         settings_ok = False
         # read settings from file
@@ -96,7 +96,6 @@ class Othello(tk.Frame):
         self.first = True
         self.movelist = []
         self.redolist = []
-        self.lb_redolist = []
         self.std_start_fen = "8/8/8/3Pp3/3pP3/8/8/8 w - - 0 1"
         self.createWidgets()
         self.gameover = False
@@ -156,86 +155,104 @@ class Othello(tk.Frame):
             self.info_draw()
 
         def undo_all():
+            print "undo all"
             if self.movecount == 0:
                 print "can't undo all - already at start position"
                 return
             self.gameover = False
             self.command("setboard " + self.std_start_fen + "\n")
-            # get reversed list
-            self.redolist = self.movelist[::-1]
-            self.movelist = []
+            while self.movelist != []:
+                mv = self.movelist.pop()
+                self.redolist.append(mv)
             self.stm = BLACK #FIXME - shouldn't be hard coded
             self.movecount = 0
             self.board = copy.deepcopy(self.board_hist[0])
             self.print_board()
-
-            self.lb_redolist = list(self.listbox.get(0, tk.END))[::-1] # get all reversed
             self.listbox.delete(0, tk.END) # delete all
             self.draw_board()
+            print "self.redolist=",self.redolist
 
         def undo():
+            print "undo"
             if self.movecount == 0:
                 print "can't undo - already at start position"
                 return
             self.gameover = False
-            # undo 2 half moves making it still humans move
-            self.command("remove\n")
 
-            for i in range(0, 2):        
+            def undo_move():
+                #if self.engine_active:
+                #    self.command("playother\n")
+                #    self.command("undo\n")
                 mv = self.movelist.pop()
                 self.redolist.append(mv)
+                self.delete_move_from_listbox(self.movecount)
                 self.movecount -= 1
                 self.board = copy.deepcopy(self.board_hist[self.movecount])
                 self.stm = abs(self.stm - 1)
                 self.print_board()
 
-            lb_row = self.listbox.get(tk.END)
-            self.lb_redolist.append(lb_row)
-            self.listbox.delete(tk.END)
+            undo_move()
+
+            # if playing against engine undo 2 moves so it's still humans move
+            if self.engine_active:
+                self.command("remove\n")  # undo 2 moves in engine
+                undo_move()               # undo second move
+
+            #self.listbox.delete(tk.END)
             self.draw_board()
+            print "self.redolist=",self.redolist
 
         def redo():
+            print "redo"
+            print "self.redolist=",self.redolist
             if self.redolist == []:
                 print "no moves to redo"
                 return
 
             self.command("force\n")
 
-            for i in range(0, 2):
+            def redo_move():
+                if self.gameover:
+                    return
+                if self.redolist == []:
+                    return
                 mv = self.redolist.pop()
                 self.movelist.append(mv)
                 self.command("usermove " + mv + "\n")
                 self.movecount += 1
+                self.add_move_to_listbox(self.movecount, mv)
                 self.board = copy.deepcopy(self.board_hist[self.movecount])
                 self.stm = abs(self.stm - 1)
                 self.print_board()            
                 self.gameover = self.check_for_gameover()
-                if self.gameover:
-                    break
-            self.listbox.insert(tk.END, self.lb_redolist.pop())
+
+            redo_move()
+            #  if playing against engine redo 2 moves so it's still humans move
+            if self.engine_active:
+                redo_move()
+
             self.first = True
             self.draw_board()
 
         def redo_all():
+            print "redo all"
+            print "self.redolist=",self.redolist
             if self.redolist == []:
                 print "can't redo all - no moves to redo"
                 return
 
             self.command("force\n")
-
-            rdlen = len(self.redolist)
-            for i in range(0, rdlen):
+            while self.redolist != []:
                 mv = self.redolist.pop()
                 self.movelist.append(mv)
                 self.command("usermove " + mv + "\n")
                 self.movecount += 1
+                self.add_move_to_listbox(self.movecount, mv)
                 self.stm = abs(self.stm - 1)
 
             self.board = copy.deepcopy(self.board_hist[self.movecount])
             self.print_board()
             self.gameover = self.check_for_gameover()
-            while self.lb_redolist != []:
-                self.listbox.insert(tk.END, self.lb_redolist.pop())
             self.first = True
             self.draw_board()
 
@@ -512,17 +529,18 @@ class Othello(tk.Frame):
             oval_tup = (i,j,piece_id)
             self.piece_ids.append(oval_tup)
 
-    def add_move_to_list(self, move):
-        # if even numbered move add it to the last line (2 moves per line)
-        # otherwise add new line
-        self.movelist.append(move)
-        self.movecount += 1
-        self.board_hist[self.movecount] = copy.deepcopy(self.board)
-        strcnt = str(self.movecount)
+    def add_move_to_listbox(self, moveno, move):
+        #fmt = "% *d. " # eg. 1 -> " 1.  "
+        #strmv1 = fmt % (3, move)
+        if move == "@@@@":
+            move = "--"
+        strcnt = str(moveno)
         if len(strcnt) < 2:
             strcnt = " " + strcnt
         strcnt = " " + strcnt + ". "
-        if self.movecount % 2 == 0:
+        # if even numbered move add it to the last line (2 moves per line)
+        # otherwise add new line
+        if moveno % 2 == 0:
             item = self.listbox.get(tk.END) 
             self.listbox.delete(tk.END)
             item = item + "  " + strcnt + move
@@ -530,13 +548,36 @@ class Othello(tk.Frame):
         else:
             self.listbox.insert(tk.END, strcnt + move)        
         self.listbox.yview(tk.END) # scroll list box to end
+   
+    def delete_move_from_listbox(self, moveno):
+        print "delete_move_from_listbox:",moveno
+        # if even moveno then delete the move from the right hand column
+        # only, otherwise can delete whole row.
+        if moveno % 2 == 0:
+            item = self.listbox.get(tk.END)
+            self.listbox.delete(tk.END)
+            self.listbox.insert(tk.END, item[0:7])
+        else:
+            self.listbox.delete(tk.END)
+
+    def add_move_to_list(self, move):
+        self.redolist = []
+        self.movelist.append(move)
+        self.movecount += 1
+        print "adding board:",self.movecount
+        try:
+            self.board_hist[self.movecount] = copy.deepcopy(self.board)
+        except IndexError:
+            print "index error on board_hist - appending instead"
+            self.board_hist.append(copy.deepcopy(self.board))
+        self.add_move_to_listbox(self.movecount, move)
 
     def pass_on_move(self, event=None):
         if self.player[self.stm] != HUMAN or self.gameover:
             return
         if self.legal_moves == []:
             print "no move available - PASS forced"
-            self.add_move_to_list("--")
+            self.add_move_to_list("@@@@")
             self.stm = abs(self.stm - 1)
             self.print_board()
             if self.player[self.stm] == COMPUTER:
@@ -749,7 +790,7 @@ class Othello(tk.Frame):
         # pass
         if mv == "@@@@":
             self.stm = abs(self.stm - 1)
-            self.add_move_to_list("--")
+            self.add_move_to_list(mv)
             return
 
         # convert move to board coordinates (e.g. "d6" goes to 3, 5)
@@ -786,6 +827,7 @@ class Othello(tk.Frame):
         print "working directory changed to" ,os.getcwd()
 
         p = subprocess.Popen([path,"-xboard", "-n", "1"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        #p = subprocess.Popen([path,"-xboard", "-n", "1", "ui-log-file", "/home/john/dev/OthelloTk/log.txt" ], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.p = p
 
         os.chdir(orig_cwd)
@@ -824,7 +866,7 @@ class Othello(tk.Frame):
             i += 1
             if i > 60:                
                 print "Error - no response from engine"
-                sys.exit(1)
+                return
             time.sleep(0.25)
 
         self.command('variant reversi\n')
@@ -842,7 +884,13 @@ class Othello(tk.Frame):
         while True:
             time.sleep(0.5)
             for l in self.op:
-                l = l.strip()                    
+                l = l.strip()
+                # FIXME - windows XP 32 bit appears to lose the first "m"
+                if l.startswith('ove'):
+                    mv = l[6:]
+                    self.mv = mv
+                    self.op = []
+                    return
                 if l.startswith('move'):
                     mv = l[7:]
                     self.mv = mv
@@ -863,7 +911,7 @@ class Othello(tk.Frame):
             try:
                 self.p.stdout.flush()
                 line = self.p.stdout.readline()
-                #print line
+                #print "line=",line
                 line = line.strip()
                 if line == '':
                     print "eof reached in read_stdout"
