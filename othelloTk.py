@@ -96,13 +96,14 @@ class Othello(tk.Frame):
         self.first = True
         self.movelist = []
         self.redolist = []
-        self.std_start_fen =  "8/8/8/3Pp3/3pP3/8/8/8 w - - 0 1"  # xboard prot. has white/black transposed
+        self.std_start_fen = "8/8/8/3pP3/3Pp3/8/8/8 b - - 0 1"
         self.createWidgets()
         self.gameover = False
         self.engine_active = False
         self.movecount = 0
         self.piece_ids = []
         self.legal_moves = []
+        self.engine_init()    # may fail if first run and path not set
         self.after_idle(self.print_board)
 
     def createWidgets(self):
@@ -344,7 +345,6 @@ class Othello(tk.Frame):
             if not filename:
                 return
             f = open(filename)
-            #f = open('/home/john/dev/OthelloTk/saved.sgf')
             line=f.readline()
             movelist = []
             while line:
@@ -361,7 +361,6 @@ class Othello(tk.Frame):
             if not filename:
                 return
             f = open(filename, 'w')
-            #f = open('/home/john/dev/OthelloTk/saved.sgf', 'w')
             f.write("(;GM[2]FF[4]\n")  # Game type 2, File format 4
             f.write("SZ[8]\n")         # board size
             f.write("AP[OthelloTk:0.0.1]\n") # Application used to create the SGF file
@@ -498,7 +497,6 @@ class Othello(tk.Frame):
         self.command("force\n")
         if movelist is not None:
             for mv in movelist:
-                print "mmm:",mv
                 self.command("usermove " + mv + "\n")
                 #self.add_move(x, y)
                 self.movelist.append(mv)
