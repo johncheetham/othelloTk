@@ -19,25 +19,18 @@ Installation
 
  2. Start othelloTk with 'python othelloTk'
 
- 3. Do edit/preferences and set the engine path to the edax executable.
+ 3. Do Engine/Set Engine Path and set the engine path to the edax executable.
     This is called lEdax-x64 in the edax bin folder (if you are using
     Linux 64 bit).
 
- 4. Set opponent to engine (you may need to exit preferences and then
-    go in again).
-
- 5. Do new game and play against edax.
-
-The settings will be remembered so you only need do it once.
-When changing the preferences you need to do New Game for them to
-take effect.
+ 4. Start the game by left clicking to place a black stone.
 
 This is a work in progress so it will have bugs and minimal features.
 
 Usage
 -----
 You play black, computer plays white.
-Click on a square to place a black piece.
+Click on a square to place a black stone.
 If you find there are no legal moves then you can pass by right
 clicking anywhere on the board. 
 

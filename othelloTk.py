@@ -19,6 +19,7 @@
 
 
 import Tkinter as tk
+import tkFileDialog
 import dialogs as dlg
 import subprocess
 import thread
@@ -43,8 +44,7 @@ class Othello(tk.Frame):
 
         # default values for settings
         settings_defaults = {
-                         "enginepath": "",
-                         "opponent": HUMAN
+                         "enginepath": ""
                         }
 
         self.othellopath = os.path.join(os.path.expanduser("~"), ".othelloTk")
@@ -91,17 +91,18 @@ class Othello(tk.Frame):
         self.board[4][3] = BLACK
         self.board_hist[0] = copy.deepcopy(self.board)
 
-        self.player = [HUMAN, self.settings["opponent"]]
+        self.player = [HUMAN, COMPUTER]
         self.stm = BLACK # side to move
         self.first = True
         self.movelist = []
         self.redolist = []
-        self.std_start_fen = "8/8/8/3Pp3/3pP3/8/8/8 w - - 0 1"
+        self.std_start_fen =  "8/8/8/3Pp3/3pP3/8/8/8 w - - 0 1"  # xboard prot. has white/black transposed
         self.createWidgets()
         self.gameover = False
         self.engine_active = False
         self.movecount = 0
         self.piece_ids = []
+        self.legal_moves = []
         self.after_idle(self.print_board)
 
     def createWidgets(self):
@@ -164,7 +165,7 @@ class Othello(tk.Frame):
             while self.movelist != []:
                 mv = self.movelist.pop()
                 self.redolist.append(mv)
-            self.stm = BLACK #FIXME - shouldn't be hard coded
+            self.stm = BLACK
             self.movecount = 0
             self.board = copy.deepcopy(self.board_hist[0])
             self.print_board()
@@ -180,25 +181,19 @@ class Othello(tk.Frame):
             self.gameover = False
 
             def undo_move():
-                #if self.engine_active:
-                #    self.command("playother\n")
-                #    self.command("undo\n")
                 mv = self.movelist.pop()
                 self.redolist.append(mv)
-                self.delete_move_from_listbox(self.movecount)
                 self.movecount -= 1
                 self.board = copy.deepcopy(self.board_hist[self.movecount])
                 self.stm = abs(self.stm - 1)
                 self.print_board()
 
+            # Undo 2 moves so it's still humans move
+            self.command("remove\n")  # undo 2 moves in engine
+            undo_move()
             undo_move()
 
-            # if playing against engine undo 2 moves so it's still humans move
-            if self.engine_active:
-                self.command("remove\n")  # undo 2 moves in engine
-                undo_move()               # undo second move
-
-            #self.listbox.delete(tk.END)
+            self.listbox.delete(tk.END)
             self.draw_board()
             print "self.redolist=",self.redolist
 
@@ -217,19 +212,19 @@ class Othello(tk.Frame):
                 if self.redolist == []:
                     return
                 mv = self.redolist.pop()
-                self.movelist.append(mv)
                 self.command("usermove " + mv + "\n")
+                #self.add_move_to_list(mv)
+                self.movelist.append(mv)
                 self.movecount += 1
-                self.add_move_to_listbox(self.movecount, mv)
                 self.board = copy.deepcopy(self.board_hist[self.movecount])
+                self.add_move_to_listbox(self.movecount, mv)
                 self.stm = abs(self.stm - 1)
                 self.print_board()            
                 self.gameover = self.check_for_gameover()
 
+            # Redo 2 moves so it's still humans move
             redo_move()
-            #  if playing against engine redo 2 moves so it's still humans move
-            if self.engine_active:
-                redo_move()
+            redo_move()
 
             self.first = True
             self.draw_board()
@@ -244,8 +239,9 @@ class Othello(tk.Frame):
             self.command("force\n")
             while self.redolist != []:
                 mv = self.redolist.pop()
-                self.movelist.append(mv)
                 self.command("usermove " + mv + "\n")
+                #self.add_move_to_list(mv)
+                self.movelist.append(mv)
                 self.movecount += 1
                 self.add_move_to_listbox(self.movecount, mv)
                 self.stm = abs(self.stm - 1)
@@ -309,11 +305,13 @@ class Othello(tk.Frame):
         menubar = tk.Menu(self.master)
 
         menu_file = tk.Menu(menubar)
-        menu_edit = tk.Menu(menubar)
+        #menu_edit = tk.Menu(menubar)
+        menu_engine = tk.Menu(menubar)
         menu_play = tk.Menu(menubar)
         menu_help = tk.Menu(menubar)
         menubar.add_cascade(menu=menu_file, label='File')
-        menubar.add_cascade(menu=menu_edit, label='Edit')
+        #menubar.add_cascade(menu=menu_edit, label='Edit')
+        menubar.add_cascade(menu=menu_engine, label='Engine')
         menubar.add_cascade(menu=menu_play, label='Play')
         menubar.add_cascade(menu=menu_help, label='Help')
 
@@ -340,10 +338,70 @@ class Othello(tk.Frame):
                     json.dump(self.settings, outfile, indent=4)
             return
 
+        def load_game():
+            print "load game"
+            filename = tkFileDialog.askopenfilename()
+            if not filename:
+                return
+            f = open(filename)
+            #f = open('/home/john/dev/OthelloTk/saved.sgf')
+            line=f.readline()
+            movelist = []
+            while line:
+                if line.startswith(";B[") or line.startswith(";W["):
+                    mv = line[3:5]
+                    movelist.append(mv)
+                line=f.readline()
+            f.close()
+            self.new_game(movelist=movelist)
+
+        def save_game():
+            print "save game"
+            filename = tkFileDialog.asksaveasfilename()
+            if not filename:
+                return
+            f = open(filename, 'w')
+            #f = open('/home/john/dev/OthelloTk/saved.sgf', 'w')
+            f.write("(;GM[2]FF[4]\n")  # Game type 2, File format 4
+            f.write("SZ[8]\n")         # board size
+            f.write("AP[OthelloTk:0.0.1]\n") # Application used to create the SGF file
+            f.write("AB[e4][d5]\n")          # Add black stones at initial position
+            f.write("AW[d4][e5]\n")          # Add white stones at initial position
+            f.write("PL[B]\n")               # Black player to move first
+            stm = BLACK
+            side = ("B", "W")
+            # write moves
+            for move in self.movelist:
+                mv = ";" + side[stm] + "[" + move + "]" + "\n"
+                f.write(mv)
+                stm = abs(stm - 1)
+            f.write(")\n")
+            f.close()
+
+        def set_engine_path():
+            d = dlg.EnginePathDialog(self, self.master)
+            if d.enginepath == "":
+                return
+            # save settings to file
+            # create ~/.othelloTk folder if it doesn't exist
+            if not os.path.exists(self.othellopath):
+                try:
+                    os.makedirs(self.othellopath)
+                except OSError, exc:                
+                    print "Error - unable to create ~/.othelloTk folder"
+                    sys.exit(1)
+            # write to ~/.othelloTk/settings.json
+            self.settings["enginepath"] = d.enginepath
+            with open(self.settings_filepath, 'w') as outfile:
+                json.dump(self.settings, outfile, indent=4)
+
         menu_file.add_command(label='New Game', command=self.new_game, underline=0, accelerator="Ctrl+N")
+        menu_file.add_command(label='Load Game', command=load_game)
+        menu_file.add_command(label='Save Game', command=save_game)
         menu_file.add_separator()
         menu_file.add_command(label='Quit', command=self.quit_program, underline=0, accelerator="Ctrl+Q")
-        menu_edit.add_command(label='Preferences', command=preferences)
+        #menu_edit.add_command(label='Preferences', command=preferences)
+        menu_engine.add_command(label='Set Engine Path', command=set_engine_path)
         menu_play.add_command(label='Pass', command=self.pass_on_move, underline=0, accelerator="Ctrl+P")
         menu_help.add_command(label='About', command=about, underline=0)
         self.master.config(menu=menubar)
@@ -395,7 +453,16 @@ class Othello(tk.Frame):
     def quit_program(self, event=None):
         self.quit()
 
-    def new_game(self, event=None):
+    def new_game(self, event=None, movelist=None):
+        # start engine if needed
+        if not self.engine_active:
+            self.engine_init()
+            if not self.engine_active:
+                print "Error starting engine"
+                # failed to init so display msgbox
+                tkMessageBox.showinfo("OthelloTk Error", "Error starting engine",
+                                       detail="Please Set Engine Path")
+                return
 
         for y in range(0, 8):
             for x in range(0, 8):
@@ -406,32 +473,55 @@ class Othello(tk.Frame):
         self.board[3][4] = BLACK
         self.board[4][3] = BLACK
 
-        self.stm = BLACK # side to move
+        self.listbox.delete(0, tk.END)
+        self.movelist = []
+        self.redolist = []
+        stm = BLACK
+        self.movecount = 0
+        #if movelist is not None:
+        #    for move in movelist:
+        #        #self.add_move_to_listbox(self.movecount, move)
+        #        self.add_move_to_list(move)
+        #        x, y = self.conv_to_coord(move)
+        #        print "x,y=",x,y
+        #        self.board[x][y] = stm
+        #        stm = abs(stm - 1)
+
+        self.stm = stm # side to move
 
         self.gameover = False
-        self.listbox.delete(0, tk.END)
-        self.movecount = 0
         self.piece_ids = []
         self.canvas.delete("piece")
         self.canvas.delete("possible_move")
+
+        self.command("setboard " + self.std_start_fen + "\n")
+        self.command("force\n")
+        if movelist is not None:
+            for mv in movelist:
+                print "mmm:",mv
+                self.command("usermove " + mv + "\n")
+                #self.add_move(x, y)
+                self.movelist.append(mv)
+                self.movecount += 1
+                x, y = self.conv_to_coord(mv)
+
+                # legal move so place piece and flip opponents pieces
+                for incx, incy in [(-1, 0), (-1, -1), (0, -1), (1, -1), (1,0), (1, 1), (0, 1), (-1, 1)]:
+                    self.flip(x, y, incx, incy, self.stm)
+                try:
+                    self.board_hist[self.movecount] = copy.deepcopy(self.board)
+                except IndexError:
+                    print "index error on board_hist - appending instead"
+                    self.board_hist.append(copy.deepcopy(self.board))
+                self.add_move_to_listbox(self.movecount, mv)
+                self.stm = abs(self.stm - 1)
+                self.print_board()            
+                self.gameover = self.check_for_gameover()
+
         self.draw_board()
         self.first = True
         self.after_idle(self.print_board)
-        self.player = [HUMAN, self.settings["opponent"]]
-        if not self.engine_active:
-            return
-        self.command("quit\n")
-        # allow 5 seconds for engine process to end            
-        i = 0
-        while True:
-            if self.p.poll() is not None: 
-                break                
-            i += 1
-            if i > 20:         
-                print "engine has not terminated after quit command"
-                break        
-            time.sleep(0.25)
-        self.engine_active = False
+        self.player = [HUMAN, COMPUTER]
 
     def on_resize(self,event):
         self.draw_board()
@@ -548,17 +638,6 @@ class Othello(tk.Frame):
         else:
             self.listbox.insert(tk.END, strcnt + move)        
         self.listbox.yview(tk.END) # scroll list box to end
-   
-    def delete_move_from_listbox(self, moveno):
-        print "delete_move_from_listbox:",moveno
-        # if even moveno then delete the move from the right hand column
-        # only, otherwise can delete whole row.
-        if moveno % 2 == 0:
-            item = self.listbox.get(tk.END)
-            self.listbox.delete(tk.END)
-            self.listbox.insert(tk.END, item[0:7])
-        else:
-            self.listbox.delete(tk.END)
 
     def add_move_to_list(self, move):
         self.redolist = []
@@ -611,6 +690,16 @@ class Othello(tk.Frame):
         x = (event.x - x_offset) / (board_width / 8)
         y = (event.y - y_offset) / (board_height / 8) 
 
+        # start engine if needed
+        if not self.engine_active:
+            self.engine_init()
+            if not self.engine_active:
+                print "Error starting engine"
+                # failed to init so display msgbox
+                tkMessageBox.showinfo("OthelloTk Error", "Error starting engine",
+                                       detail="Please Set Engine Path")
+                return
+
         if self.board[x][y] != UNOCCUPIED:
             return
  
@@ -622,28 +711,23 @@ class Othello(tk.Frame):
         if (x, y) not in self.legal_moves:
             return
 
+        self.add_move(x, y)
         # legal move so place piece and flip opponents pieces
-        for incx, incy in [(-1, 0), (-1, -1), (0, -1), (1, -1), (1,0), (1, 1), (0, 1), (-1, 1)]:
-            self.flip(x, y, incx, incy, self.stm)
+        #for incx, incy in [(-1, 0), (-1, -1), (0, -1), (1, -1), (1,0), (1, 1), (0, 1), (-1, 1)]:
+        #    self.flip(x, y, incx, incy, self.stm)
 
-        self.stm = abs(self.stm - 1)
-        self.print_board()
-        self.canvas.update_idletasks()
+        #self.stm = abs(self.stm - 1)
+        #self.print_board()
+        #self.canvas.update_idletasks()
 
         # convert move from board co-ordinates to othello format (e.g. 3, 5 goes to 'd6')
         l = "abcdefgh"[x]
         n = y + 1
         move = l + str(n)
-        print "move:", move
-        self.add_move_to_list(move)
-
-        # start engine if needed
-        if self.player[self.stm] == COMPUTER and not self.engine_active:
-            self.engine_init()
-            if not self.engine_active:
-                print "Error starting engine"
-                # failed to init so switch opponent to human
-                self.player[self.stm] = HUMAN
+        #print "move:", move
+        #self.add_move_to_list(move)
+        self.print_board()
+        self.canvas.update_idletasks()
  
         # engine OK - send move
         if self.player[self.stm] == COMPUTER:
@@ -666,6 +750,22 @@ class Othello(tk.Frame):
         self.ct= thread.start_new_thread( self.computer_move, () ) 
         self.after_idle(self.get_move)
         return
+
+    def add_move(self, x, y):
+        # legal move so place piece and flip opponents pieces
+        for incx, incy in [(-1, 0), (-1, -1), (0, -1), (1, -1), (1,0), (1, 1), (0, 1), (-1, 1)]:
+            self.flip(x, y, incx, incy, self.stm)
+
+        self.stm = abs(self.stm - 1)
+        #self.print_board()
+        #self.canvas.update_idletasks()
+
+        # convert move from board co-ordinates to othello format (e.g. 3, 5 goes to 'd6')
+        l = "abcdefgh"[x]
+        n = y + 1
+        move = l + str(n)
+        print "move:", move
+        self.add_move_to_list(move)
 
     # Game is over when neither side can move
     def check_for_gameover(self):
@@ -775,6 +875,14 @@ class Othello(tk.Frame):
             yy = yy + incy
         return 0
 
+    # convert move to board coordinates (e.g. "d6" goes to 3, 5)
+    def conv_to_coord(self, mv):
+        letter = mv[0]
+        num = mv[1]
+        x = "abcdefgh".index(letter)
+        y = int(num) - 1
+        return x, y
+
     # get computers move
     def get_move(self):
         print
@@ -794,12 +902,13 @@ class Othello(tk.Frame):
             return
 
         # convert move to board coordinates (e.g. "d6" goes to 3, 5)
-        letter = mv[0]
-        num = mv[1]
-        x = "abcdefgh".index(letter)
-        y = int(num) - 1
+        x, y = self.conv_to_coord(mv)
+        #letter = mv[0]
+        #num = mv[1]
+        #x = "abcdefgh".index(letter)
+        #y = int(num) - 1
 
-        for incx, incy in [(-1, 0), (-1, -1), (0, -1), (1, -1), (1,0), (1, 1), (0, 1), (-1, 1)]:                        
+        for incx, incy in [(-1, 0), (-1, -1), (0, -1), (1, -1), (1,0), (1, 1), (0, 1), (-1, 1)]:
             self.flip(x, y, incx, incy, self.stm)
         self.add_move_to_list(mv)
         self.stm = abs(self.stm - 1)
@@ -810,7 +919,7 @@ class Othello(tk.Frame):
         print "Initialising Engine"
         self.engine_active = False
         #this_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-        #path = this_dir + os.sep + "edax.sh"  
+        #path = this_dir + os.sep + "edax.sh"
         path = self.settings["enginepath"]
         if not os.path.exists(path):
             print "Error enginepath does not exist"
@@ -826,9 +935,15 @@ class Othello(tk.Frame):
         os.chdir(engine_wdir)
         print "working directory changed to" ,os.getcwd()
 
-        p = subprocess.Popen([path,"-xboard", "-n", "1"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        #p = subprocess.Popen([path,"-xboard", "-n", "1", "ui-log-file", "/home/john/dev/OthelloTk/log.txt" ], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        self.p = p
+        try:
+            p = subprocess.Popen([path,"-xboard", "-n", "1"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            #p = subprocess.Popen([path,"-xboard", "-n", "1", "ui-log-file", "/home/john/dev/OthelloTk/log.txt" ], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            self.p = p
+        except OSError:
+            print "Error starting engine - check path/permissions"
+            #tkMessageBox.showinfo("OthelloTk Error", "Error starting engine",
+            #                       detail="Check path/permissions")
+            return
 
         os.chdir(orig_cwd)
         print "current working directory restored back to", os.getcwd()
@@ -870,6 +985,7 @@ class Othello(tk.Frame):
             time.sleep(0.25)
 
         self.command('variant reversi\n')
+        self.command("setboard " + self.std_start_fen + "\n")
         #self.command('st 6\n')
         self.command('sd 4\n')
         #sd = "sd " + str(self.settings["searchdepth"]) + "\n"
