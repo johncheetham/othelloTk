@@ -334,15 +334,6 @@ class Othello(tk.Frame):
                                          "http://www.johncheetham.com\n\n" 
                                          "This program comes with ABSOLUTELY NO WARRANTY")
 
-        def preferences():
-            d = dlg.PreferencesDialog(self, self.master)
-            # save settings to file
-            if d.result is not None:
-                # write to ~/.othelloTk/settings.json
-                with open(self.settings_filepath, 'w') as outfile:
-                    json.dump(self.settings, outfile, indent=4)
-            return
-
         def load_game():
             print "load game"
             filename = tkFileDialog.askopenfilename()
@@ -383,26 +374,36 @@ class Othello(tk.Frame):
             f.write(")\n")
             f.close()
 
-        def set_engine_path():
-            d = dlg.EnginePathDialog(self.master, self.settings["enginepath"])
-            if d.enginepath == "":
-                return
+        def save_settings():
             # save settings to file
             # write to ~/.othelloTk/settings.json
-            self.settings["enginepath"] = d.enginepath
             with open(self.settings_filepath, 'w') as outfile:
                 json.dump(self.settings, outfile, indent=4)
+
+        def preferences():
+            d = dlg.PreferencesDialog(self, self.master)
+            # save settings to file
+            if d.result is not None:
+                save_settings()
+            return
+
+        def set_engine_path():
+            d = dlg.EnginePathDialog(self.master, self.settings["enginepath"])
+            if d.enginepath == self.settings["enginepath"]:
+                return
+            self.settings["enginepath"] = d.enginepath
+            save_settings()             # save settings to file
 
         def time_control():
             d = dlg.TimeControlDialog(self.master, self.settings["time_per_move"])
             if d.time_per_move == self.settings["time_per_move"]:
                 return
-            # save settings to file
-            # write to ~/.othelloTk/settings.json
             self.settings["time_per_move"] = d.time_per_move
-            with open(self.settings_filepath, 'w') as outfile:
-                json.dump(self.settings, outfile, indent=4)
+            save_settings()             # save settings to file
             self.command("st " + str(self.settings["time_per_move"]) + "\n") # time per move in seconds
+
+        def move_now(event=None):
+            self.command("?\n")
 
         menu_file.add_command(label='New Game', command=self.new_game, underline=0, accelerator="Ctrl+N")
         menu_file.add_command(label='Load Game', command=load_game)
@@ -413,6 +414,7 @@ class Othello(tk.Frame):
         menu_engine.add_command(label='Set Engine Path', command=set_engine_path)
         menu_engine.add_command(label='Time Control', command=time_control)
         menu_play.add_command(label='Pass', command=self.pass_on_move, underline=0, accelerator="Ctrl+P")
+        menu_play.add_command(label='Move Now', command=move_now, underline=0, accelerator="Ctrl+M")
         menu_help.add_command(label='About', command=about, underline=0)
         self.master.config(menu=menubar)
 
@@ -420,6 +422,7 @@ class Othello(tk.Frame):
         self.bind_all("<Control-q>", self.quit_program)
         self.bind_all("<Control-n>", self.new_game)
         self.bind_all("<Control-p>", self.pass_on_move)
+        self.bind_all("<Control-m>", move_now)
 
     def info_draw(self):
         width = self.info_frame.winfo_width()
