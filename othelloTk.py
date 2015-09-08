@@ -30,7 +30,9 @@ import shlex
 import json
 import tkMessageBox
 import copy
+import sys
 
+VERSION = "0.0.1"
 BLACK=0
 WHITE=1
 UNOCCUPIED=-1
@@ -44,10 +46,19 @@ class Othello(tk.Frame):
 
         # default values for settings
         settings_defaults = {
-                         "enginepath": ""
+                         "enginepath": "",
+                         "time_per_move": 4
                         }
 
         self.othellopath = os.path.join(os.path.expanduser("~"), ".othelloTk")
+        # create ~/.othelloTk folder if it doesn't exist
+        if not os.path.exists(self.othellopath):
+            try:
+                os.makedirs(self.othellopath)
+            except OSError, exc:                
+                print "Error - unable to create ~/.othelloTk folder"
+                sys.exit(1)
+
         self.settings_filepath = os.path.join (self.othellopath, "settings.json")
         settings_ok = False
         # read settings from file
@@ -318,7 +329,7 @@ class Othello(tk.Frame):
 
         def about():
             tkMessageBox.showinfo("About OthelloTk", "OthelloTk",
-                                        detail="0.0.1\n\nA GUI to play Othello against Edax.\n\n"
+                                        detail=VERSION+"\n\nA GUI to play Othello against Edax.\n\n"
                                          "Copyright (c) 2015 John Cheetham\n"
                                          "http://www.johncheetham.com\n\n" 
                                          "This program comes with ABSOLUTELY NO WARRANTY")
@@ -327,13 +338,6 @@ class Othello(tk.Frame):
             d = dlg.PreferencesDialog(self, self.master)
             # save settings to file
             if d.result is not None:
-                # create ~/.othelloTk folder if it doesn't exist
-                if not os.path.exists(self.othellopath):
-                    try:
-                        os.makedirs(self.othellopath)
-                    except OSError, exc:                
-                        print "Error - unable to create ~/.othelloTk folder"
-                        sys.exit(1)
                 # write to ~/.othelloTk/settings.json
                 with open(self.settings_filepath, 'w') as outfile:
                     json.dump(self.settings, outfile, indent=4)
@@ -357,13 +361,15 @@ class Othello(tk.Frame):
 
         def save_game():
             print "save game"
-            filename = tkFileDialog.asksaveasfilename()
+            options = {}
+            options['defaultextension'] = ".sgf"
+            filename = tkFileDialog.asksaveasfilename(**options)
             if not filename:
                 return
             f = open(filename, 'w')
             f.write("(;GM[2]FF[4]\n")  # Game type 2, File format 4
             f.write("SZ[8]\n")         # board size
-            f.write("AP[OthelloTk:0.0.1]\n") # Application used to create the SGF file
+            f.write("AP[OthelloTk:"+VERSION+"]\n") # Application used to create the SGF file
             f.write("AB[e4][d5]\n")          # Add black stones at initial position
             f.write("AW[d4][e5]\n")          # Add white stones at initial position
             f.write("PL[B]\n")               # Black player to move first
@@ -378,21 +384,25 @@ class Othello(tk.Frame):
             f.close()
 
         def set_engine_path():
-            d = dlg.EnginePathDialog(self, self.master)
+            d = dlg.EnginePathDialog(self.master, self.settings["enginepath"])
             if d.enginepath == "":
                 return
             # save settings to file
-            # create ~/.othelloTk folder if it doesn't exist
-            if not os.path.exists(self.othellopath):
-                try:
-                    os.makedirs(self.othellopath)
-                except OSError, exc:                
-                    print "Error - unable to create ~/.othelloTk folder"
-                    sys.exit(1)
             # write to ~/.othelloTk/settings.json
             self.settings["enginepath"] = d.enginepath
             with open(self.settings_filepath, 'w') as outfile:
                 json.dump(self.settings, outfile, indent=4)
+
+        def time_control():
+            d = dlg.TimeControlDialog(self.master, self.settings["time_per_move"])
+            if d.time_per_move == self.settings["time_per_move"]:
+                return
+            # save settings to file
+            # write to ~/.othelloTk/settings.json
+            self.settings["time_per_move"] = d.time_per_move
+            with open(self.settings_filepath, 'w') as outfile:
+                json.dump(self.settings, outfile, indent=4)
+            self.command("st " + str(self.settings["time_per_move"]) + "\n") # time per move in seconds
 
         menu_file.add_command(label='New Game', command=self.new_game, underline=0, accelerator="Ctrl+N")
         menu_file.add_command(label='Load Game', command=load_game)
@@ -401,6 +411,7 @@ class Othello(tk.Frame):
         menu_file.add_command(label='Quit', command=self.quit_program, underline=0, accelerator="Ctrl+Q")
         #menu_edit.add_command(label='Preferences', command=preferences)
         menu_engine.add_command(label='Set Engine Path', command=set_engine_path)
+        menu_engine.add_command(label='Time Control', command=time_control)
         menu_play.add_command(label='Pass', command=self.pass_on_move, underline=0, accelerator="Ctrl+P")
         menu_help.add_command(label='About', command=about, underline=0)
         self.master.config(menu=menubar)
@@ -477,17 +488,7 @@ class Othello(tk.Frame):
         self.redolist = []
         stm = BLACK
         self.movecount = 0
-        #if movelist is not None:
-        #    for move in movelist:
-        #        #self.add_move_to_listbox(self.movecount, move)
-        #        self.add_move_to_list(move)
-        #        x, y = self.conv_to_coord(move)
-        #        print "x,y=",x,y
-        #        self.board[x][y] = stm
-        #        stm = abs(stm - 1)
-
         self.stm = stm # side to move
-
         self.gameover = False
         self.piece_ids = []
         self.canvas.delete("piece")
@@ -503,7 +504,7 @@ class Othello(tk.Frame):
                 self.movecount += 1
                 x, y = self.conv_to_coord(mv)
 
-                # legal move so place piece and flip opponents pieces
+                # place piece and flip opponents pieces
                 for incx, incy in [(-1, 0), (-1, -1), (0, -1), (1, -1), (1,0), (1, 1), (0, 1), (-1, 1)]:
                     self.flip(x, y, incx, incy, self.stm)
                 try:
@@ -662,8 +663,7 @@ class Othello(tk.Frame):
                 self.command(str1)
 
                 self.mv = ""
-                self.ct= thread.start_new_thread( self.computer_move, () ) 
-                self.after_idle(self.get_move)
+                self.get_computer_move(0)
             return
         print "Can't pass - legal moves are available"
 
@@ -709,21 +709,13 @@ class Othello(tk.Frame):
         if (x, y) not in self.legal_moves:
             return
 
+        # Move is OK - place piece, flip opponents pieces, toggle self.stm
         self.add_move(x, y)
-        # legal move so place piece and flip opponents pieces
-        #for incx, incy in [(-1, 0), (-1, -1), (0, -1), (1, -1), (1,0), (1, 1), (0, 1), (-1, 1)]:
-        #    self.flip(x, y, incx, incy, self.stm)
-
-        #self.stm = abs(self.stm - 1)
-        #self.print_board()
-        #self.canvas.update_idletasks()
 
         # convert move from board co-ordinates to othello format (e.g. 3, 5 goes to 'd6')
         l = "abcdefgh"[x]
         n = y + 1
         move = l + str(n)
-        #print "move:", move
-        #self.add_move_to_list(move)
         self.print_board()
         self.canvas.update_idletasks()
  
@@ -745,8 +737,7 @@ class Othello(tk.Frame):
 
         # Computers move
         self.mv = ""
-        self.ct= thread.start_new_thread( self.computer_move, () ) 
-        self.after_idle(self.get_move)
+        self.get_computer_move(0)
         return
 
     def add_move(self, x, y):
@@ -882,14 +873,38 @@ class Othello(tk.Frame):
         return x, y
 
     # get computers move
-    def get_move(self):
-        print
-        print "white to move"
-        time.sleep(1.0)
-        # if no move wait a second and try again
-        while self.mv == "":
-            time.sleep(1.0)
-            print "white to move"
+    def get_computer_move(self, s=0):
+        # Check for move from engine
+        for l in self.op:
+            l = l.strip()
+            # FIXME - windows XP 32 bit appears to lose the first "m"
+            if l.startswith('ove'):
+                self.mv = l[6:]
+                break
+            if l.startswith('move'):
+                self.mv = l[7:]
+                break
+        self.op = []
+        # if no move from engine wait 1 second and try again
+        if self.mv == "":
+            if s == 0:
+                print
+                print "white to move"
+                self.b1.config(state=tk.DISABLED)
+                self.b2.config(state=tk.DISABLED)
+                self.b3.config(state=tk.DISABLED)
+                self.b4.config(state=tk.DISABLED)
+            else:
+                print "elapsed ", s, " secs"
+            s += 1
+            root.after(1000, self.get_computer_move, s)
+            return
+
+        self.b1.config(state=tk.NORMAL)
+        self.b2.config(state=tk.NORMAL)
+        self.b3.config(state=tk.NORMAL)
+        self.b4.config(state=tk.NORMAL)
+
         print "move:",self.mv
         mv = self.mv
 
@@ -924,6 +939,12 @@ class Othello(tk.Frame):
             return
         print "path=",path
 
+        arglist = [path,"-xboard", "-n", "1"]
+        optionsfile = os.path.join (self.othellopath, "edax.ini")
+        if os.path.exists(optionsfile):
+            arglist.extend(["option-file", optionsfile])
+        print "subprocess args:",arglist
+
         #
         # change the working directory to that of the engine before starting it
         #
@@ -932,10 +953,9 @@ class Othello(tk.Frame):
         engine_wdir = os.path.dirname(path)
         os.chdir(engine_wdir)
         print "working directory changed to" ,os.getcwd()
-
+        print "starting subprocess"
         try:
-            p = subprocess.Popen([path,"-xboard", "-n", "1"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            #p = subprocess.Popen([path,"-xboard", "-n", "1", "ui-log-file", "/home/john/dev/OthelloTk/log.txt" ], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            p = subprocess.Popen(arglist, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             self.p = p
         except OSError:
             print "Error starting engine - check path/permissions"
@@ -984,33 +1004,13 @@ class Othello(tk.Frame):
 
         self.command('variant reversi\n')
         self.command("setboard " + self.std_start_fen + "\n")
-        #self.command('st 6\n')
-        self.command('sd 4\n')
+        print "self.settings[time_per_move]=",self.settings["time_per_move"]
+        self.command("st " + str(self.settings["time_per_move"]) + "\n") # time per move in seconds
+        #self.command('sd 4\n')
         #sd = "sd " + str(self.settings["searchdepth"]) + "\n"
         #print "setting search depth:",sd
         #self.command(sd)
         self.engine_active = True
-
-    def computer_move(self):
-        # Wait for move from engine
-        i = 0
-        bestmove = False                
-        while True:
-            time.sleep(0.5)
-            for l in self.op:
-                l = l.strip()
-                # FIXME - windows XP 32 bit appears to lose the first "m"
-                if l.startswith('ove'):
-                    mv = l[6:]
-                    self.mv = mv
-                    self.op = []
-                    return
-                if l.startswith('move'):
-                    mv = l[7:]
-                    self.mv = mv
-                    self.op = []
-                    return
-            self.op = []
 
     def command(self, cmd):
         try:

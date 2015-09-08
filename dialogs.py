@@ -69,19 +69,17 @@ class PreferencesDialog(tkSimpleDialog.Dialog):
         #    self.comprb.configure(state=tk.DISABLED)
 
 class EnginePathDialog(tkSimpleDialog.Dialog):
-    def __init__(self, parent, master):
-        self.mainapp = parent
+    def __init__(self, master, enginepath):
+        self.enginepath = enginepath
         tkSimpleDialog.Dialog.__init__(self, master)
 
     def body(self, master):
-        self.enginepath = ""
-        enginepath = self.mainapp.settings["enginepath"] 
         tk.Label(master, text="Engine Path:").grid(row=2, sticky=tk.W)
         tk.Button(master, text="Browse", command=self.get_engine_path).grid(row=2, column=2)
 
         # engine path
         self.ep = tk.StringVar()
-        self.ep.set(enginepath)
+        self.ep.set(self.enginepath)
         self.e1 = tk.Entry(master, textvariable=self.ep, width=30)
 
         self.e1.grid(row=2, column=1, sticky=tk.W, padx=10, pady=10)
@@ -100,12 +98,35 @@ class EnginePathDialog(tkSimpleDialog.Dialog):
             return False
 
     def apply(self):
-        #self.mainapp.settings["enginepath"] = self.e1.get()
         self.enginepath = self.e1.get()
-        #self.result = 1
         return
 
     def get_engine_path(self):
         filename = tkFileDialog.askopenfilename()
         self.ep.set(filename)
+
+class TimeControlDialog(tkSimpleDialog.Dialog):
+    def __init__(self, master, time_per_move):
+        self.time_per_move = time_per_move
+        tkSimpleDialog.Dialog.__init__(self, master)
+
+    def body(self, master):
+        tk.Label(master, text="Time per Move (seconds):").grid(row=2, sticky=tk.W)
+        self.tpm = tk.IntVar()
+        self.tpm.set(self.time_per_move)
+        self.e1 = tk.Entry(master, textvariable=self.tpm, width=4)
+        self.e1.grid(row=2, column=1, sticky=tk.W, padx=10, pady=10)
+        return self.e1 # initial focus
+
+    def validate(self):
+        tpm = self.e1.get()
+        try: 
+            int(tpm)
+            return True
+        except ValueError:
+            return False
+
+    def apply(self):
+        self.time_per_move = self.e1.get()
+        return
 

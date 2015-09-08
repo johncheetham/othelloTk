@@ -19,7 +19,8 @@ Installation
 
  2. Start othelloTk with 'python othelloTk'
 
- 3. Do Engine/Set Engine Path and set the engine path to the edax executable.
+ 3. Do Engine/Set Engine Path and set the engine path to the edax
+    executable.
     This is called lEdax-x64 in the edax bin folder (if you are using
     Linux 64 bit).
 
@@ -32,5 +33,15 @@ Usage
 You play black, computer plays white.
 Click on a square to place a black stone.
 If you find there are no legal moves then you can pass by right
-clicking anywhere on the board. 
+clicking anywhere on the board.
+
+You can set some edax engine options using an edax.ini file.
+Copy this file into the ~/.othelloTk/ folder (or into the edax bin folder)
+for it to work. For example if you want edax to output a log file then
+add a line like this:
+
+    ui-log-file /path/to/logfile.txt
+
+
+
 
