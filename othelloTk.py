@@ -47,7 +47,8 @@ class Othello(tk.Frame):
         # default values for settings
         settings_defaults = {
                          "enginepath": "",
-                         "time_per_move": 4
+                         "time_per_move": 4,
+                         "show_legal_moves": 1
                         }
 
         self.othellopath = os.path.join(os.path.expanduser("~"), ".othelloTk")
@@ -317,12 +318,12 @@ class Othello(tk.Frame):
         menubar = tk.Menu(self.master)
 
         menu_file = tk.Menu(menubar)
-        #menu_edit = tk.Menu(menubar)
+        menu_edit = tk.Menu(menubar)
         menu_engine = tk.Menu(menubar)
         menu_play = tk.Menu(menubar)
         menu_help = tk.Menu(menubar)
         menubar.add_cascade(menu=menu_file, label='File')
-        #menubar.add_cascade(menu=menu_edit, label='Edit')
+        menubar.add_cascade(menu=menu_edit, label='Edit')
         menubar.add_cascade(menu=menu_engine, label='Engine')
         menubar.add_cascade(menu=menu_play, label='Play')
         menubar.add_cascade(menu=menu_help, label='Help')
@@ -381,26 +382,21 @@ class Othello(tk.Frame):
                 json.dump(self.settings, outfile, indent=4)
 
         def preferences():
-            d = dlg.PreferencesDialog(self, self.master)
-            # save settings to file
-            if d.result is not None:
-                save_settings()
+            d = dlg.PreferencesDialog(self.master, self.settings)
+            if d.update: 
+                save_settings()             # save settings to file
             return
 
         def set_engine_path():
-            d = dlg.EnginePathDialog(self.master, self.settings["enginepath"])
-            if d.enginepath == self.settings["enginepath"]:
-                return
-            self.settings["enginepath"] = d.enginepath
-            save_settings()             # save settings to file
+            d = dlg.EnginePathDialog(self.master, self.settings)
+            if d.update: 
+                save_settings()             # save settings to file
 
         def time_control():
-            d = dlg.TimeControlDialog(self.master, self.settings["time_per_move"])
-            if d.time_per_move == self.settings["time_per_move"]:
-                return
-            self.settings["time_per_move"] = d.time_per_move
-            save_settings()             # save settings to file
-            self.command("st " + str(self.settings["time_per_move"]) + "\n") # time per move in seconds
+            d = dlg.TimeControlDialog(self.master, self.settings)
+            if d.update:
+                save_settings()             # save settings to file
+                self.command("st " + str(self.settings["time_per_move"]) + "\n") # time per move in seconds
 
         def move_now(event=None):
             self.command("?\n")
@@ -410,7 +406,7 @@ class Othello(tk.Frame):
         menu_file.add_command(label='Save Game', command=save_game)
         menu_file.add_separator()
         menu_file.add_command(label='Quit', command=self.quit_program, underline=0, accelerator="Ctrl+Q")
-        #menu_edit.add_command(label='Preferences', command=preferences)
+        menu_edit.add_command(label='Preferences', command=preferences)
         menu_engine.add_command(label='Set Engine Path', command=set_engine_path)
         menu_engine.add_command(label='Time Control', command=time_control)
         menu_play.add_command(label='Pass', command=self.pass_on_move, underline=0, accelerator="Ctrl+P")
@@ -605,7 +601,7 @@ class Othello(tk.Frame):
             fill_colour = COLOUR[BLACK]
         elif self.board[i][j] == WHITE:
             fill_colour = COLOUR[WHITE]
-        elif (i, j) in self.legal_moves:
+        elif (i, j) in self.legal_moves and self.settings["show_legal_moves"]:
             fill_colour = "light blue"
             adj = square_width * 0.45
             tag = "possible_move"

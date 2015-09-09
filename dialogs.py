@@ -23,74 +23,45 @@ import tkSimpleDialog
 import tkFileDialog
 
 class PreferencesDialog(tkSimpleDialog.Dialog):
-    def __init__(self, parent, master):
-        self.mainapp = parent
+    def __init__(self, master, settings):
+        self.settings = settings
+        self.show_legal_moves = tk.IntVar()
+        self.show_legal_moves.set(settings["show_legal_moves"])
+        self.update = False
         tkSimpleDialog.Dialog.__init__(self, master)
 
     def body(self, master):
-        #self.rb = tk.IntVar()
-        #self.rb.set(self.mainapp.settings["opponent"])
-        #tk.Label(master, text="Opponent:").grid(row=0, sticky=tk.W)
-        #tk.Radiobutton(master, text="Human", variable=self.rb, value=HUMAN, state=tk.NORMAL).grid(row=0, column=1, sticky=tk.W)
-
-        enginepath = self.mainapp.settings["enginepath"]
-        #if os.path.exists(enginepath):
-        #    state = tk.NORMAL
-        #else:
-        #    state = tk.DISABLED
-        #self.comprb = tk.Radiobutton(master, text="Engine", variable=self.rb, value=COMPUTER, state=state)
-        #self.comprb.grid(row=1, column=1, sticky=tk.W)
-        #self.comprb.config(state=NORMAL)
-        tk.Label(master, text="Engine Path:").grid(row=2, sticky=tk.W)
-        tk.Button(master, text="Browse", command=self.get_engine_path).grid(row=2, column=2)
-
-        self.v = tk.StringVar()
-        self.v.set(enginepath)
-        self.e1 = tk.Entry(master, textvariable=self.v, width=30)
-
-        self.e1.grid(row=2, column=1, sticky=tk.W, padx=10, pady=10)
-
-        #Label(master, text="Search Depth:").grid(row=2)
-
-        return self.e1 # initial focus
+        c = tk.Checkbutton(master, text="Show Legal Moves", variable=self.show_legal_moves)
+        c.grid(row=0, column=1, sticky=tk.W, padx=10, pady=10)
+        if self.show_legal_moves.get() == 1:
+            c.select()
+        return c # initial focus
 
     def apply(self):
-        #self.mainapp.settings["opponent"] = self.rb.get()
-        self.mainapp.settings["enginepath"] = self.e1.get()
-        self.result = 1
+        self.settings["show_legal_moves"] = self.show_legal_moves.get()
+        self.update = True
         return
 
-    def get_engine_path(self):
-        filename = tkFileDialog.askopenfilename()
-        self.v.set(filename)
-        #if os.path.exists(filename):
-        #    self.comprb.configure(state=tk.NORMAL)
-        #else:
-        #    self.comprb.configure(state=tk.DISABLED)
-
 class EnginePathDialog(tkSimpleDialog.Dialog):
-    def __init__(self, master, enginepath):
-        self.enginepath = enginepath
+    def __init__(self, master, settings):
+        self.settings = settings
+        self.enginepath = tk.StringVar()
+        self.enginepath.set(settings["enginepath"])
+        self.update = False
         tkSimpleDialog.Dialog.__init__(self, master)
 
     def body(self, master):
         tk.Label(master, text="Engine Path:").grid(row=2, sticky=tk.W)
         tk.Button(master, text="Browse", command=self.get_engine_path).grid(row=2, column=2)
-
-        # engine path
-        self.ep = tk.StringVar()
-        self.ep.set(self.enginepath)
-        self.e1 = tk.Entry(master, textvariable=self.ep, width=30)
-
+        self.e1 = tk.Entry(master, textvariable=self.enginepath, width=30)
         self.e1.grid(row=2, column=1, sticky=tk.W, padx=10, pady=10)
         self.msg = tk.StringVar()
         self.msg.set("Please set a valid path to the Edax engine")
         msglbl = tk.Label(master, textvariable=self.msg, justify=tk.LEFT).grid(row=3, column=1, sticky=tk.W)
-
         return self.e1 # initial focus
 
     def validate(self):
-        enginepath = self.ep.get()
+        enginepath = self.enginepath.get()
         if os.path.exists(enginepath): 
             return True
         else:
@@ -98,35 +69,40 @@ class EnginePathDialog(tkSimpleDialog.Dialog):
             return False
 
     def apply(self):
-        self.enginepath = self.e1.get()
+        self.settings["enginepath"] = self.e1.get()
+        self.update = True
         return
 
     def get_engine_path(self):
         filename = tkFileDialog.askopenfilename()
-        self.ep.set(filename)
+        self.enginepath.set(filename)
 
 class TimeControlDialog(tkSimpleDialog.Dialog):
-    def __init__(self, master, time_per_move):
-        self.time_per_move = time_per_move
+    def __init__(self, master, settings):
+        self.settings = settings
+        self.time_per_move = tk.IntVar()
+        self.time_per_move.set(settings["time_per_move"])
+        self.update = False
         tkSimpleDialog.Dialog.__init__(self, master)
 
     def body(self, master):
         tk.Label(master, text="Time per Move (seconds):").grid(row=2, sticky=tk.W)
-        self.tpm = tk.IntVar()
-        self.tpm.set(self.time_per_move)
-        self.e1 = tk.Entry(master, textvariable=self.tpm, width=4)
+        self.e1 = tk.Entry(master, textvariable=self.time_per_move, width=4)
         self.e1.grid(row=2, column=1, sticky=tk.W, padx=10, pady=10)
         return self.e1 # initial focus
 
     def validate(self):
         tpm = self.e1.get()
         try: 
-            int(tpm)
+            x = int(tpm)
+            if x < 0:
+                return False
             return True
         except ValueError:
             return False
 
     def apply(self):
-        self.time_per_move = self.e1.get()
+        self.settings["time_per_move"] = self.e1.get()
+        self.update = True
         return
 
