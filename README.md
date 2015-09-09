@@ -26,8 +26,6 @@ Installation
 
  4. Start the game by left clicking to place a black stone.
 
-This is a work in progress so it will have bugs and minimal features.
-
 Usage
 -----
 You play black, computer plays white.
@@ -42,6 +40,10 @@ add a line like this:
 
     ui-log-file /path/to/logfile.txt
 
+To display debug messages use the -debug flag:
+    python othelloTk -debug
 
-
+If the engine is taking too long to move you can use ctrl-m to make it
+move instantly. Use the time control menu option to set the time to
+move.
 

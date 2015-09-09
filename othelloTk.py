@@ -64,20 +64,20 @@ class Othello(tk.Frame):
         settings_ok = False
         # read settings from file
         if os.path.exists(self.settings_filepath):
-            print "attempting to read settings from file",self.settings_filepath
+            self.dprint("attempting to read settings from file",self.settings_filepath)
             with open(self.settings_filepath) as settings_file:
                 settings_json = json.load(settings_file)
             # check all keys present
             settings_ok = True
             for key in settings_defaults:
                 if key not in settings_json.keys():
-                    print "key", key, "is missing"
+                    self.dprint("key", key, "is missing")
                     settings_ok = False
         if settings_ok:
-            print "Using settings from",self.settings_filepath
+            self.dprint("Using settings from",self.settings_filepath)
             self.settings = settings_json
         else:
-            print "Using default settings (unable to get settings from file)"
+            self.dprint("Using default settings (unable to get settings from file)")
             self.settings = settings_defaults
 
         # make resizeable
@@ -117,6 +117,13 @@ class Othello(tk.Frame):
         self.legal_moves = []
         self.engine_init()    # may fail if first run and path not set
         self.after_idle(self.print_board)
+
+    def dprint(self, *args):
+        if not debug:
+            return
+        for i in args: 
+            print i,
+        print
 
     def createWidgets(self):
         # make resizeable
@@ -169,9 +176,9 @@ class Othello(tk.Frame):
             self.info_draw()
 
         def undo_all():
-            print "undo all"
+            self.dprint("undo all")
             if self.movecount == 0:
-                print "can't undo all - already at start position"
+                self.dprint("can't undo all - already at start position")
                 return
             self.gameover = False
             self.command("setboard " + self.std_start_fen + "\n")
@@ -184,12 +191,12 @@ class Othello(tk.Frame):
             self.print_board()
             self.listbox.delete(0, tk.END) # delete all
             self.draw_board()
-            print "self.redolist=",self.redolist
+            self.dprint("self.redolist=",self.redolist)
 
         def undo():
-            print "undo"
+            self.dprint("undo")
             if self.movecount == 0:
-                print "can't undo - already at start position"
+                self.dprint("can't undo - already at start position")
                 return
             self.gameover = False
 
@@ -208,13 +215,13 @@ class Othello(tk.Frame):
 
             self.listbox.delete(tk.END)
             self.draw_board()
-            print "self.redolist=",self.redolist
+            self.dprint("self.redolist=",self.redolist)
 
         def redo():
-            print "redo"
-            print "self.redolist=",self.redolist
+            self.dprint("redo")
+            self.dprint("self.redolist=",self.redolist)
             if self.redolist == []:
-                print "no moves to redo"
+                self.dprint("no moves to redo")
                 return
 
             self.command("force\n")
@@ -243,10 +250,10 @@ class Othello(tk.Frame):
             self.draw_board()
 
         def redo_all():
-            print "redo all"
-            print "self.redolist=",self.redolist
+            self.dprint("redo all")
+            self.dprint("self.redolist=",self.redolist)
             if self.redolist == []:
-                print "can't redo all - no moves to redo"
+                self.dprint("can't redo all - no moves to redo")
                 return
 
             self.command("force\n")
@@ -336,7 +343,7 @@ class Othello(tk.Frame):
                                          "This program comes with ABSOLUTELY NO WARRANTY")
 
         def load_game():
-            print "load game"
+            self.dprint("load game")
             filename = tkFileDialog.askopenfilename()
             if not filename:
                 return
@@ -352,7 +359,7 @@ class Othello(tk.Frame):
             self.new_game(movelist=movelist)
 
         def save_game():
-            print "save game"
+            self.dprint("save game")
             options = {}
             options['defaultextension'] = ".sgf"
             filename = tkFileDialog.asksaveasfilename(**options)
@@ -385,6 +392,7 @@ class Othello(tk.Frame):
             d = dlg.PreferencesDialog(self.master, self.settings)
             if d.update: 
                 save_settings()             # save settings to file
+                self.draw_board()           # update show legal moves on board
             return
 
         def set_engine_path():
@@ -467,7 +475,7 @@ class Othello(tk.Frame):
         if not self.engine_active:
             self.engine_init()
             if not self.engine_active:
-                print "Error starting engine"
+                self.dprint("Error starting engine")
                 # failed to init so display msgbox
                 tkMessageBox.showinfo("OthelloTk Error", "Error starting engine",
                                        detail="Please Set Engine Path")
@@ -509,7 +517,7 @@ class Othello(tk.Frame):
                 try:
                     self.board_hist[self.movecount] = copy.deepcopy(self.board)
                 except IndexError:
-                    print "index error on board_hist - appending instead"
+                    self.dprint("index error on board_hist - appending instead")
                     self.board_hist.append(copy.deepcopy(self.board))
                 self.add_move_to_listbox(self.movecount, mv)
                 self.stm = abs(self.stm - 1)
@@ -641,11 +649,11 @@ class Othello(tk.Frame):
         self.redolist = []
         self.movelist.append(move)
         self.movecount += 1
-        print "adding board:",self.movecount
+        self.dprint("adding board:",self.movecount)
         try:
             self.board_hist[self.movecount] = copy.deepcopy(self.board)
         except IndexError:
-            print "index error on board_hist - appending instead"
+            self.dprint("index error on board_hist - appending instead")
             self.board_hist.append(copy.deepcopy(self.board))
         self.add_move_to_listbox(self.movecount, move)
 
@@ -653,7 +661,7 @@ class Othello(tk.Frame):
         if self.player[self.stm] != HUMAN or self.gameover:
             return
         if self.legal_moves == []:
-            print "no move available - PASS forced"
+            self.dprint("no move available - PASS forced")
             self.add_move_to_list("@@@@")
             self.stm = abs(self.stm - 1)
             self.print_board()
@@ -664,7 +672,7 @@ class Othello(tk.Frame):
                 self.mv = ""
                 self.get_computer_move(0)
             return
-        print "Can't pass - legal moves are available"
+        self.dprint("Can't pass - legal moves are available")
 
     # human passes on move (only allowed if no legal moves)
     def rclicked(self, event):
@@ -691,7 +699,7 @@ class Othello(tk.Frame):
         if not self.engine_active:
             self.engine_init()
             if not self.engine_active:
-                print "Error starting engine"
+                self.dprint("Error starting engine")
                 # failed to init so display msgbox
                 tkMessageBox.showinfo("OthelloTk Error", "Error starting engine",
                                        detail="Please Set Engine Path")
@@ -752,7 +760,7 @@ class Othello(tk.Frame):
         l = "abcdefgh"[x]
         n = y + 1
         move = l + str(n)
-        print "move:", move
+        self.dprint("move:", move)
         self.add_move_to_list(move)
 
     # Game is over when neither side can move
@@ -767,7 +775,7 @@ class Othello(tk.Frame):
                self.winner_msg = "Game Over - White Wins"
            else:
                self.winner_msg = "Game Over - Match Drawn"
-           print self.winner_msg
+           self.dprint(self.winner_msg)
            self.info_draw()
            return True
        return False
@@ -787,30 +795,31 @@ class Othello(tk.Frame):
            for x in range(0, 8):
                if (x,y) in self.legal_moves:
                    self.draw_piece(x, y)
-       print
-       print "  A B C D E F G H"        
-       for y in range(0, 8):
-            print y+1,
-            for x in range(0, 8):                
-                if self.board[x][y] == BLACK:
-                    print "*",
-                elif self.board[x][y] == WHITE:
-                    print "O",                
-                else:
-                    if (x, y) in self.legal_moves:
-                        print ".",
-                    else:
-                        print "-",
-            print y
-       print "  0 1 2 3 4 5 6 7"
-       print
-       print "Black:",self.count(BLACK),"   White:",self.count(WHITE)
-       if self.stm == BLACK:
-           print "black to move"
-       else:
-           print "white to move"
-       print "Legal moves:",self.get_legal_moves(self.stm)
-       print
+       if debug:
+           print
+           print "  A B C D E F G H"        
+           for y in range(0, 8):
+               print y+1,
+               for x in range(0, 8):                
+                   if self.board[x][y] == BLACK:
+                       print "*",
+                   elif self.board[x][y] == WHITE:
+                       print "O",                
+                   else:
+                       if (x, y) in self.legal_moves:
+                           print ".",
+                       else:
+                           print "-",
+               print y
+           print "  0 1 2 3 4 5 6 7"
+           print
+           print "Black:",self.count(BLACK),"   White:",self.count(WHITE)
+           if self.stm == BLACK:
+               print "black to move"
+           else:
+               print "white to move"
+           print "Legal moves:",self.get_legal_moves(self.stm)
+           print
        self.info_draw()
 
        #ids = self.canvas.find_all()
@@ -887,14 +896,14 @@ class Othello(tk.Frame):
         # if no move from engine wait 1 second and try again
         if self.mv == "":
             if s == 0:
-                print
-                print "white to move"
+                self.dprint("")
+                self.dprint("white to move")
                 self.b1.config(state=tk.DISABLED)
                 self.b2.config(state=tk.DISABLED)
                 self.b3.config(state=tk.DISABLED)
                 self.b4.config(state=tk.DISABLED)
             else:
-                print "elapsed ", s, " secs"
+                self.dprint("elapsed ", s, " secs")
             s += 1
             root.after(1000, self.get_computer_move, s)
             return
@@ -904,7 +913,7 @@ class Othello(tk.Frame):
         self.b3.config(state=tk.NORMAL)
         self.b4.config(state=tk.NORMAL)
 
-        print "move:",self.mv
+        self.dprint("move:",self.mv)
         mv = self.mv
 
         # pass
@@ -928,49 +937,49 @@ class Othello(tk.Frame):
         self.gameover = self.check_for_gameover()
 
     def engine_init(self):
-        print "Initialising Engine"
+        self.dprint("Initialising Engine")
         self.engine_active = False
         #this_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
         #path = this_dir + os.sep + "edax.sh"
         path = self.settings["enginepath"]
         if not os.path.exists(path):
-            print "Error enginepath does not exist"
+            self.dprint("Error enginepath does not exist")
             return
-        print "path=",path
+        self.dprint("path=",path)
 
         arglist = [path,"-xboard", "-n", "1"]
         optionsfile = os.path.join (self.othellopath, "edax.ini")
         if os.path.exists(optionsfile):
             arglist.extend(["option-file", optionsfile])
-        print "subprocess args:",arglist
+        self.dprint("subprocess args:",arglist)
 
         #
         # change the working directory to that of the engine before starting it
         #
         orig_cwd = os.getcwd()
-        print "current working directory is", orig_cwd        
+        self.dprint("current working directory is", orig_cwd)
         engine_wdir = os.path.dirname(path)
         os.chdir(engine_wdir)
-        print "working directory changed to" ,os.getcwd()
-        print "starting subprocess"
+        self.dprint("working directory changed to" ,os.getcwd())
+        self.dprint("starting subprocess")
         try:
             p = subprocess.Popen(arglist, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             self.p = p
         except OSError:
-            print "Error starting engine - check path/permissions"
+            self.dprint("Error starting engine - check path/permissions")
             #tkMessageBox.showinfo("OthelloTk Error", "Error starting engine",
             #                       detail="Check path/permissions")
             return
 
         os.chdir(orig_cwd)
-        print "current working directory restored back to", os.getcwd()
+        self.dprint("current working directory restored back to", os.getcwd())
 
         # check process is running
         i = 0
         while (p.poll() is not None):            
             i += 1
             if i > 40:        
-                print "unable to start engine process"
+                self.dprint("unable to start engine process")
                 return False
             time.sleep(0.25)        
 
@@ -991,19 +1000,18 @@ class Othello(tk.Frame):
                     f = shlex.split(l)
                     features = f[1:]
                     for f in features:
-                        print f
+                        self.dprint(f)
             self.op = []
             if response_ok:
                 break            
             i += 1
             if i > 60:                
-                print "Error - no response from engine"
+                self.dprint("Error - no response from engine")
                 return
             time.sleep(0.25)
 
         self.command('variant reversi\n')
         self.command("setboard " + self.std_start_fen + "\n")
-        print "self.settings[time_per_move]=",self.settings["time_per_move"]
         self.command("st " + str(self.settings["time_per_move"]) + "\n") # time per move in seconds
         #self.command('sd 4\n')
         #sd = "sd " + str(self.settings["searchdepth"]) + "\n"
@@ -1015,9 +1023,9 @@ class Othello(tk.Frame):
         try:
             self.p.stdin.write(cmd)
         except AttributeError:
-            print "AttributeError"
+            self.dprint("AttributeError")
         except IOError:
-            print "ioerror"
+            self.dprint("ioerror")
 
     def read_stdout(self):
         while True:
@@ -1027,11 +1035,11 @@ class Othello(tk.Frame):
                 #print "line=",line
                 line = line.strip()
                 if line == '':
-                    print "eof reached in read_stdout"
+                    self.dprint("eof reached in read_stdout")
                     break  
                 self.op.append(line)
             except Exception, e:
-                print "subprocess error in read_stdout:",e       
+                self.dprint("subprocess error in read_stdout:",e)
 
     def flip(self, x, y, incx, incy, stm):
         count = 0
@@ -1098,8 +1106,13 @@ def set_aspect(content_frame, info_frame, pad_frame, aspect_ratio, gap, bordersi
         #    width=desired_width, height=desired_height)
     pad_frame.bind("<Configure>", enforce_aspect_ratio)
 
-root = tk.Tk()
-app = Othello(root)
-root.aspect(894, 600, 16, 10)
-app.mainloop()
+if __name__ == "__main__":
+    debug = False
+    for arg in sys.argv:
+        if arg == "-debug":
+            debug = True
+    root = tk.Tk()
+    app = Othello(root)
+    root.aspect(894, 600, 16, 10)
+    app.mainloop()
 
