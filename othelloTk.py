@@ -82,7 +82,7 @@ class Othello(tk.Frame):
 
         # make resizeable
         self.grid(sticky=tk.N + tk.S + tk.E + tk.W) 
-        master.minsize(width=300, height=200)
+        master.minsize(width=487, height=275)
         self.master = master
         self.master.title('OthelloTk')
         row = []
@@ -278,27 +278,27 @@ class Othello(tk.Frame):
         self.listbox.grid(row=3, column=0, sticky="ewns")
         scrollbar.config(command=self.listbox.yview)
 
-        self.bbox = tk.Frame(info_frame, bg="Blue", relief=tk.RIDGE)
+        self.bbox = tk.Frame(info_frame, bg="light blue", relief=tk.RIDGE)
         self.bbox.grid(row=4, column=0)
 
-        # U+219e left double headed (8606)
-        # << left all U+21E4 (8676)
-        self.b1 = tk.Button(self.bbox, text=unichr(8676), command=undo_all)
+        # undo all
+        # U+25C0 (9664) left pointing triangle
+        self.b1 = tk.Button(self.bbox, text=unichr(9664)+unichr(9664), command=undo_all)
         self.b1.grid(row=0, column=0)
 
-        # U+21FD open headed (8701)
-        # U+2B05 solid (11013)
-        # < left arrow U+2190 = 8592 in decimal
-        self.b2= tk.Button(self.bbox, text=unichr(8592), command=undo)
+        # undo
+        # U+25C0 (9664) left pointing triangle
+        self.b2= tk.Button(self.bbox, text=unichr(9664), command=undo) 
         self.b2.grid(row=0, column=1)
-        #self.b.config(font=("Courier", 125, "bold"), fg="red", bg="blue")
 
-        # > right arrow U+2192
-        self.b3 = tk.Button(self.bbox, text=unichr(8594), command=redo)
+        # redo
+        # U+25B6 (9654) right pointing triangle
+        self.b3 = tk.Button(self.bbox, text=unichr(9654), command=redo)
         self.b3.grid(row=0, column=2)
 
-        # >> right all U+21E5
-        self.b4 = tk.Button(self.bbox, text=unichr(8677), command=redo_all)
+        # redo all
+        # U+25B6 (9654) right pointing triangle
+        self.b4 = tk.Button(self.bbox, text=unichr(9654)+unichr(9654), command=redo_all)
         self.b4.grid(row=0, column=3)
 
         self.bbox.rowconfigure(0, weight=1)
@@ -459,10 +459,10 @@ class Othello(tk.Frame):
             self.eog_text.set(self.winner_msg)
             self.lbl_eog.config(font=("Courier", fontsize / 2, "bold"), padx=width * 0.1, pady=width * 0.1)
 
-        self.b1.config(font=("Courier", int(fontsize * 1.0)), fg="black", bg="light blue")
-        self.b2.config(font=("Courier", int(fontsize * 1.0)), fg="black", bg="light blue")
-        self.b3.config(font=("Courier", int(fontsize * 1.0)), fg="black", bg="light blue")
-        self.b4.config(font=("Courier", int(fontsize * 1.0)), fg="black", bg="light blue")
+        self.b1.config(font=("Courier", int(fontsize * 1.0)), fg="MidnightBlue", bg="light blue")
+        self.b2.config(font=("Courier", int(fontsize * 1.0)), fg="MidnightBlue", bg="light blue")
+        self.b3.config(font=("Courier", int(fontsize * 1.0)), fg="MidnightBlue", bg="light blue")
+        self.b4.config(font=("Courier", int(fontsize * 1.0)), fg="MidnightBlue", bg="light blue")
 
         self.listbox.config(font=("Courier", fontsize/2), fg="black", bg="light blue", height=10, width=20)
         self.info_frame.config(padx=fontsize*-1)

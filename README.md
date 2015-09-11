@@ -41,6 +41,7 @@ add a line like this:
     ui-log-file /path/to/logfile.txt
 
 To display debug messages use the -debug flag:
+
     python othelloTk -debug
 
 If the engine is taking too long to move you can use ctrl-m to make it
