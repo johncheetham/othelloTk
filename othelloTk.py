@@ -419,7 +419,7 @@ class Othello(tk.Frame):
         menu_edit.add_command(label='Preferences', command=preferences)
         menu_engine.add_command(label='Set Engine Path', command=set_engine_path)
         menu_engine.add_command(label='Time Control', command=time_control)
-        self.menu_play.add_command(label='Pass', command=self.pass_on_move, underline=0, accelerator="Ctrl+P")
+        self.menu_play.add_command(label='Pass', command=self.pass_on_move, underline=0, accelerator="Ctrl+P", state=tk.DISABLED)
         self.menu_play.add_command(label='Move Now', command=move_now, underline=0, accelerator="Ctrl+M", state=tk.DISABLED)
         menu_help.add_command(label='About', command=about, underline=0)
         self.master.config(menu=menubar)
@@ -823,7 +823,10 @@ class Othello(tk.Frame):
            print "Legal moves:",self.get_legal_moves(self.stm)
            print
        self.info_draw()
-
+       if self.player[self.stm] == HUMAN and self.legal_moves == []:
+           self.menu_play.entryconfig("Pass",state=tk.NORMAL)
+       else:
+           self.menu_play.entryconfig("Pass",state=tk.DISABLED)
        #ids = self.canvas.find_all()
        #for id in ids:
        #    tags = self.canvas.gettags(id)[0]
