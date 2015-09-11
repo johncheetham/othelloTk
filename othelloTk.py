@@ -327,12 +327,12 @@ class Othello(tk.Frame):
         menu_file = tk.Menu(menubar)
         menu_edit = tk.Menu(menubar)
         menu_engine = tk.Menu(menubar)
-        menu_play = tk.Menu(menubar)
+        self.menu_play = tk.Menu(menubar)
         menu_help = tk.Menu(menubar)
         menubar.add_cascade(menu=menu_file, label='File')
         menubar.add_cascade(menu=menu_edit, label='Edit')
         menubar.add_cascade(menu=menu_engine, label='Engine')
-        menubar.add_cascade(menu=menu_play, label='Play')
+        menubar.add_cascade(menu=self.menu_play, label='Play')
         menubar.add_cascade(menu=menu_help, label='Help')
 
         def about():
@@ -407,6 +407,8 @@ class Othello(tk.Frame):
                 self.command("st " + str(self.settings["time_per_move"]) + "\n") # time per move in seconds
 
         def move_now(event=None):
+            if self.player[self.stm] != COMPUTER:
+                return
             self.command("?\n")
 
         menu_file.add_command(label='New Game', command=self.new_game, underline=0, accelerator="Ctrl+N")
@@ -417,8 +419,8 @@ class Othello(tk.Frame):
         menu_edit.add_command(label='Preferences', command=preferences)
         menu_engine.add_command(label='Set Engine Path', command=set_engine_path)
         menu_engine.add_command(label='Time Control', command=time_control)
-        menu_play.add_command(label='Pass', command=self.pass_on_move, underline=0, accelerator="Ctrl+P")
-        menu_play.add_command(label='Move Now', command=move_now, underline=0, accelerator="Ctrl+M")
+        self.menu_play.add_command(label='Pass', command=self.pass_on_move, underline=0, accelerator="Ctrl+P")
+        self.menu_play.add_command(label='Move Now', command=move_now, underline=0, accelerator="Ctrl+M", state=tk.DISABLED)
         menu_help.add_command(label='About', command=about, underline=0)
         self.master.config(menu=menubar)
 
@@ -902,6 +904,7 @@ class Othello(tk.Frame):
                 self.b2.config(state=tk.DISABLED)
                 self.b3.config(state=tk.DISABLED)
                 self.b4.config(state=tk.DISABLED)
+                self.menu_play.entryconfig("Move Now",state=tk.NORMAL)
             else:
                 self.dprint("elapsed ", s, " secs")
             s += 1
@@ -912,6 +915,7 @@ class Othello(tk.Frame):
         self.b2.config(state=tk.NORMAL)
         self.b3.config(state=tk.NORMAL)
         self.b4.config(state=tk.NORMAL)
+        self.menu_play.entryconfig("Move Now",state=tk.DISABLED)
 
         self.dprint("move:",self.mv)
         mv = self.mv
