@@ -161,8 +161,8 @@ class Othello(tk.Frame):
         self.lbl_score_black.set("* Black 2")
         self.lbl_score_white.set("  White 2")
 
-        self.lbl_black = tk.Label(info_frame, textvariable=self.lbl_score_black, bg="DarkSlateBlue", fg="light blue")
-        self.lbl_white = tk.Label(info_frame, textvariable=self.lbl_score_white, bg="DarkSlateBlue", fg="light blue")
+        self.lbl_black = tk.Label(info_frame, textvariable=self.lbl_score_black, bg="DarkSlateBlue", fg="DarkKhaki")
+        self.lbl_white = tk.Label(info_frame, textvariable=self.lbl_score_white, bg="DarkSlateBlue", fg="DarkKhaki")
         self.lbl_black.grid(row=0, column=0, sticky="n")
         self.lbl_white.grid(row=1, column=0, sticky="n")
 
@@ -411,6 +411,11 @@ class Othello(tk.Frame):
                 return
             self.command("?\n")
 
+        def go(event=None):
+            if self.player[self.stm] != COMPUTER:
+                return
+            self.command("go\n")
+
         menu_file.add_command(label='New Game', command=self.new_game, underline=0, accelerator="Ctrl+N")
         menu_file.add_command(label='Load Game', command=load_game)
         menu_file.add_command(label='Save Game', command=save_game)
@@ -429,6 +434,7 @@ class Othello(tk.Frame):
         self.bind_all("<Control-n>", self.new_game)
         self.bind_all("<Control-p>", self.pass_on_move)
         self.bind_all("<Control-m>", move_now)
+        self.bind_all("<Control-g>", go)
 
     def info_draw(self):
         width = self.info_frame.winfo_width()
