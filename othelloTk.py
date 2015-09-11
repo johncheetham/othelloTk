@@ -278,7 +278,7 @@ class Othello(tk.Frame):
         self.listbox.grid(row=3, column=0, sticky="ewns")
         scrollbar.config(command=self.listbox.yview)
 
-        self.bbox = tk.Frame(info_frame, bg="light blue", relief=tk.RIDGE)
+        self.bbox = tk.Frame(info_frame, bg="black", bd=3, relief=tk.RIDGE)
         self.bbox.grid(row=4, column=0)
 
         # undo all
@@ -467,12 +467,12 @@ class Othello(tk.Frame):
             self.eog_text.set(self.winner_msg)
             self.lbl_eog.config(font=("Courier", fontsize / 2, "bold"), padx=width * 0.1, pady=width * 0.1)
 
-        self.b1.config(font=("Courier", int(fontsize * 1.0)), fg="MidnightBlue", bg="light blue")
-        self.b2.config(font=("Courier", int(fontsize * 1.0)), fg="MidnightBlue", bg="light blue")
-        self.b3.config(font=("Courier", int(fontsize * 1.0)), fg="MidnightBlue", bg="light blue")
-        self.b4.config(font=("Courier", int(fontsize * 1.0)), fg="MidnightBlue", bg="light blue")
+        self.b1.config(font=("Courier", int(fontsize * 0.6)), fg="MidnightBlue", bg="LightSkyBlue3", activeforeground="blue", activebackground="gainsboro")
+        self.b2.config(font=("Courier", int(fontsize * 0.6)), fg="MidnightBlue", bg="LightSkyBlue3", activeforeground="blue", activebackground="gainsboro")
+        self.b3.config(font=("Courier", int(fontsize * 0.6)), fg="MidnightBlue", bg="LightSkyBlue3", activeforeground="blue", activebackground="gainsboro")
+        self.b4.config(font=("Courier", int(fontsize * 0.6)), fg="MidnightBlue", bg="LightSkyBlue3", activeforeground="blue", activebackground="gainsboro")
 
-        self.listbox.config(font=("Courier", fontsize/2), fg="black", bg="light blue", height=10, width=20)
+        self.listbox.config(font=("Courier", fontsize/2), fg="black", bg="LightSkyBlue3", height=10, width=20)
         self.info_frame.config(padx=fontsize*-1)
 
     def quit_program(self, event=None):
