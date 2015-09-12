@@ -17,18 +17,18 @@
 #   along with othelloTk.  If not, see <http://www.gnu.org/licenses/>.
 #   
 
-import Tkinter as tk
+import tkinter as tk
 import os
-import tkSimpleDialog
-import tkFileDialog
+import tkinter.simpledialog
+import tkinter.filedialog
 
-class PreferencesDialog(tkSimpleDialog.Dialog):
+class PreferencesDialog(tkinter.simpledialog.Dialog):
     def __init__(self, master, settings):
         self.settings = settings
         self.show_legal_moves = tk.IntVar()
         self.show_legal_moves.set(settings["show_legal_moves"])
         self.update = False
-        tkSimpleDialog.Dialog.__init__(self, master)
+        tkinter.simpledialog.Dialog.__init__(self, master)
 
     def body(self, master):
         c = tk.Checkbutton(master, text="Show Legal Moves", variable=self.show_legal_moves)
@@ -42,13 +42,13 @@ class PreferencesDialog(tkSimpleDialog.Dialog):
         self.update = True
         return
 
-class EnginePathDialog(tkSimpleDialog.Dialog):
+class EnginePathDialog(tkinter.simpledialog.Dialog):
     def __init__(self, master, settings):
         self.settings = settings
         self.enginepath = tk.StringVar()
         self.enginepath.set(settings["enginepath"])
         self.update = False
-        tkSimpleDialog.Dialog.__init__(self, master)
+        tkinter.simpledialog.Dialog.__init__(self, master)
 
     def body(self, master):
         tk.Label(master, text="Engine Path:").grid(row=2, sticky=tk.W)
@@ -74,16 +74,16 @@ class EnginePathDialog(tkSimpleDialog.Dialog):
         return
 
     def get_engine_path(self):
-        filename = tkFileDialog.askopenfilename()
+        filename = tkinter.filedialog.askopenfilename()
         self.enginepath.set(filename)
 
-class TimeControlDialog(tkSimpleDialog.Dialog):
+class TimeControlDialog(tkinter.simpledialog.Dialog):
     def __init__(self, master, settings):
         self.settings = settings
         self.time_per_move = tk.IntVar()
         self.time_per_move.set(settings["time_per_move"])
         self.update = False
-        tkSimpleDialog.Dialog.__init__(self, master)
+        tkinter.simpledialog.Dialog.__init__(self, master)
 
     def body(self, master):
         tk.Label(master, text="Time per Move (seconds):").grid(row=2, sticky=tk.W)

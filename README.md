@@ -3,14 +3,14 @@ Edax gui to play Othello against the Edax engine.
 
 John Cheetham August 2015
 
-Written in python2/Tkinter and licensed under the GPL v3+
+Written in python3/Tkinter and licensed under the GPL v3+
 (see the file named LICENSE).
 
-It was tested with edax 4.3.2 on CentOS7 64 bit.
+It was tested with edax 4.3.2 and Python 3.4.3 on CentOS7 64 bit.
 
 Requirements
 ------------
-Python 2.7, Tkinter, Edax.
+Python 3, Tkinter, Edax.
 
 Installation
 ------------

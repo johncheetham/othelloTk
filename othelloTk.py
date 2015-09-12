@@ -18,17 +18,17 @@
 #   
 
 
-import Tkinter as tk
-import tkFileDialog
+import tkinter as tk
+import tkinter.filedialog
 import dialogs as dlg
 import subprocess
-import thread
+import _thread
 import time
 #import inspect
 import os
 import shlex
 import json
-import tkMessageBox
+import tkinter.messagebox
 import copy
 import sys
 
@@ -56,8 +56,8 @@ class Othello(tk.Frame):
         if not os.path.exists(self.othellopath):
             try:
                 os.makedirs(self.othellopath)
-            except OSError, exc:                
-                print "Error - unable to create ~/.othelloTk folder"
+            except OSError as exc:                
+                print("Error - unable to create ~/.othelloTk folder")
                 sys.exit(1)
 
         self.settings_filepath = os.path.join (self.othellopath, "settings.json")
@@ -70,7 +70,7 @@ class Othello(tk.Frame):
             # check all keys present
             settings_ok = True
             for key in settings_defaults:
-                if key not in settings_json.keys():
+                if key not in list(settings_json.keys()):
                     self.dprint("key", key, "is missing")
                     settings_ok = False
         if settings_ok:
@@ -122,8 +122,8 @@ class Othello(tk.Frame):
         if not debug:
             return
         for i in args: 
-            print i,
-        print
+            print(i, end=' ')
+        print()
 
     def createWidgets(self):
         # make resizeable
@@ -140,17 +140,17 @@ class Othello(tk.Frame):
         board_width = min(screen_width, screen_height) * 0.6
         board_height = board_width
 
-        gap = board_width / 25
+        gap = int(board_width / 25)
         info_bwidth = 10
         pad_frame_border = 5
-        pad_frame_width = board_width + board_width / 2 + gap + info_bwidth + pad_frame_border*2
+        pad_frame_width = board_width + int(board_width / 2) + gap + info_bwidth + pad_frame_border*2
         pad_frame = tk.Frame(self, borderwidth=pad_frame_border, width=pad_frame_width, height=board_height, bg="light blue", relief=tk.RIDGE)
         pad_frame.grid(row=0, column=0, sticky="nsew")
 
         self.canvas = tk.Canvas(pad_frame, borderwidth=0,width=board_width, height=board_height, bg="darkgreen")
 
         # information frame
-        info_frame_width = board_width / 2
+        info_frame_width = int(board_width / 2)
         info_frame = tk.Frame(pad_frame, borderwidth=info_bwidth, padx=20,background="DarkSlateBlue", width=info_frame_width, height=board_height, relief=tk.RIDGE)
         set_aspect(self.canvas, info_frame, pad_frame, aspect_ratio=1.0, gap=gap, bordersize=pad_frame_border)
         self.info_frame = info_frame
@@ -283,22 +283,22 @@ class Othello(tk.Frame):
 
         # undo all
         # U+25C0 (9664) left pointing triangle
-        self.b1 = tk.Button(self.bbox, text=unichr(9664)+unichr(9664), command=undo_all)
+        self.b1 = tk.Button(self.bbox, text=chr(9664)+chr(9664), command=undo_all)
         self.b1.grid(row=0, column=0)
 
         # undo
         # U+25C0 (9664) left pointing triangle
-        self.b2= tk.Button(self.bbox, text=unichr(9664), command=undo) 
+        self.b2= tk.Button(self.bbox, text=chr(9664), command=undo) 
         self.b2.grid(row=0, column=1)
 
         # redo
         # U+25B6 (9654) right pointing triangle
-        self.b3 = tk.Button(self.bbox, text=unichr(9654), command=redo)
+        self.b3 = tk.Button(self.bbox, text=chr(9654), command=redo)
         self.b3.grid(row=0, column=2)
 
         # redo all
         # U+25B6 (9654) right pointing triangle
-        self.b4 = tk.Button(self.bbox, text=unichr(9654)+unichr(9654), command=redo_all)
+        self.b4 = tk.Button(self.bbox, text=chr(9654)+chr(9654), command=redo_all)
         self.b4.grid(row=0, column=3)
 
         self.bbox.rowconfigure(0, weight=1)
@@ -336,7 +336,7 @@ class Othello(tk.Frame):
         menubar.add_cascade(menu=menu_help, label='Help')
 
         def about():
-            tkMessageBox.showinfo("About OthelloTk", "OthelloTk",
+            tkinter.messagebox.showinfo("About OthelloTk", "OthelloTk",
                                         detail=VERSION+"\n\nA GUI to play Othello against Edax.\n\n"
                                          "Copyright (c) 2015 John Cheetham\n"
                                          "http://www.johncheetham.com\n\n" 
@@ -344,7 +344,7 @@ class Othello(tk.Frame):
 
         def load_game():
             self.dprint("load game")
-            filename = tkFileDialog.askopenfilename()
+            filename = tkinter.filedialog.askopenfilename()
             if not filename:
                 return
             f = open(filename)
@@ -362,7 +362,7 @@ class Othello(tk.Frame):
             self.dprint("save game")
             options = {}
             options['defaultextension'] = ".sgf"
-            filename = tkFileDialog.asksaveasfilename(**options)
+            filename = tkinter.filedialog.asksaveasfilename(**options)
             if not filename:
                 return
             f = open(filename, 'w')
@@ -465,14 +465,14 @@ class Othello(tk.Frame):
         self.eog_text.set(" ")
         if self.gameover:
             self.eog_text.set(self.winner_msg)
-            self.lbl_eog.config(font=("Courier", fontsize / 2, "bold"), padx=width * 0.1, pady=width * 0.1)
+            self.lbl_eog.config(font=("Courier", int(fontsize/2), "bold"), padx=width * 0.1, pady=width * 0.1)
 
         self.b1.config(font=("Courier", int(fontsize * 0.6)), fg="MidnightBlue", bg="LightSkyBlue3", activeforeground="blue", activebackground="gainsboro")
         self.b2.config(font=("Courier", int(fontsize * 0.6)), fg="MidnightBlue", bg="LightSkyBlue3", activeforeground="blue", activebackground="gainsboro")
         self.b3.config(font=("Courier", int(fontsize * 0.6)), fg="MidnightBlue", bg="LightSkyBlue3", activeforeground="blue", activebackground="gainsboro")
         self.b4.config(font=("Courier", int(fontsize * 0.6)), fg="MidnightBlue", bg="LightSkyBlue3", activeforeground="blue", activebackground="gainsboro")
 
-        self.listbox.config(font=("Courier", fontsize/2), fg="black", bg="LightSkyBlue3", height=10, width=20)
+        self.listbox.config(font=("Courier", int(fontsize/2)), fg="black", bg="LightSkyBlue3", height=10, width=20)
         self.info_frame.config(padx=fontsize*-1)
 
     def quit_program(self, event=None):
@@ -485,7 +485,7 @@ class Othello(tk.Frame):
             if not self.engine_active:
                 self.dprint("Error starting engine")
                 # failed to init so display msgbox
-                tkMessageBox.showinfo("OthelloTk Error", "Error starting engine",
+                tkinter.messagebox.showinfo("OthelloTk Error", "Error starting engine",
                                        detail="Please Set Engine Path")
                 return
 
@@ -543,22 +543,22 @@ class Othello(tk.Frame):
     def get_board_size(self):
         canvas_width = self.canvas.winfo_width()
         canvas_height = self.canvas.winfo_height()
-        border_size_w = canvas_width / 9
-        border_size_h = canvas_height / 9
+        border_size_w = int(canvas_width / 9)
+        border_size_h = int(canvas_height / 9)
         board_width = canvas_width - border_size_w
         board_height = canvas_height - border_size_h
         # Make sure width/height is divisible by 8
         board_width = board_width - (board_width % 8)
         board_height = board_height - (board_height % 8)
-        x_offset = border_size_w / 2
-        y_offset = border_size_h / 2
+        x_offset = int(border_size_w / 2)
+        y_offset = int(border_size_h / 2)
         return board_width, board_height, x_offset, y_offset, border_size_w, border_size_h
 
     def draw_board(self):
         board_width, board_height, x_offset, y_offset, border_size_w, border_size_h = self.get_board_size()
 
-        square_width = board_width / 8
-        square_height = board_height / 8
+        square_width = int(board_width / 8)
+        square_height = int(board_height / 8)
         self.canvas.delete(tk.ALL)
         line_width = self.line_width
         # horizontal board lines
@@ -582,20 +582,20 @@ class Othello(tk.Frame):
                 self.draw_piece(x, y)
 
 
-        fontsize = (square_width / 4) * -1
+        fontsize = int(square_width / 4) * -1
         # draw x co-ordinates
         x = square_width
         let="ABCDEFGH"
         for i in range(0, 8):
             #self.canvas.create_text(x, y_offset / 2, font=("Helvetica", fontsize, "bold italic"), text=let[i], fill="light blue")
-            self.canvas.create_text(x, y_offset / 2, font=("Helvetica", fontsize, "italic"), text=let[i], fill="light blue", tags="coords")
+            self.canvas.create_text(x, int(y_offset/2), font=("Helvetica", fontsize, "italic"), text=let[i], fill="light blue", tags="coords")
             x += square_width
 
         # draw y co-ordinates
         y = square_width
         num="12345678"
         for i in range(0, 8):
-            self.canvas.create_text(x_offset / 2, y, font=("Helvetica", fontsize, "italic"), text=num[i], fill="light blue", tags="coords")
+            self.canvas.create_text(int(x_offset/2), y, font=("Helvetica", fontsize, "italic"), text=num[i], fill="light blue", tags="coords")
             y += square_height
 
     def draw_piece(self, i, j):
@@ -606,8 +606,8 @@ class Othello(tk.Frame):
                 self.canvas.delete(piece_id)
                 self.piece_ids.remove((x,y,piece_id))
         board_width, board_height, x_offset, y_offset, border_size_w, border_size_h = self.get_board_size()
-        square_width = board_width / 8
-        square_height = board_height / 8
+        square_width = int(board_width / 8)
+        square_height = int(board_height / 8)
 
         # adjustment because we don't want the disc to fill the whole square
         adj =  square_width * 0.1
@@ -700,8 +700,8 @@ class Othello(tk.Frame):
            return
 
         # get x, y square co-ordinates (in range 0 - 7)
-        x = (event.x - x_offset) / (board_width / 8)
-        y = (event.y - y_offset) / (board_height / 8) 
+        x = int((event.x - x_offset) / (board_width / 8))
+        y = int((event.y - y_offset) / (board_height / 8))
 
         # start engine if needed
         if not self.engine_active:
@@ -709,7 +709,7 @@ class Othello(tk.Frame):
             if not self.engine_active:
                 self.dprint("Error starting engine")
                 # failed to init so display msgbox
-                tkMessageBox.showinfo("OthelloTk Error", "Error starting engine",
+                tkinter.messagebox.showinfo("OthelloTk Error", "Error starting engine",
                                        detail="Please Set Engine Path")
                 return
 
@@ -804,30 +804,30 @@ class Othello(tk.Frame):
                if (x,y) in self.legal_moves:
                    self.draw_piece(x, y)
        if debug:
-           print
-           print "  A B C D E F G H"        
+           print()
+           print("  A B C D E F G H")        
            for y in range(0, 8):
-               print y+1,
+               print(y+1, end=' ')
                for x in range(0, 8):                
                    if self.board[x][y] == BLACK:
-                       print "*",
+                       print("*", end=' ')
                    elif self.board[x][y] == WHITE:
-                       print "O",                
+                       print("O", end=' ')                
                    else:
                        if (x, y) in self.legal_moves:
-                           print ".",
+                           print(".", end=' ')
                        else:
-                           print "-",
-               print y
-           print "  0 1 2 3 4 5 6 7"
-           print
-           print "Black:",self.count(BLACK),"   White:",self.count(WHITE)
+                           print("-", end=' ')
+               print(y)
+           print("  0 1 2 3 4 5 6 7")
+           print()
+           print("Black:",self.count(BLACK),"   White:",self.count(WHITE))
            if self.stm == BLACK:
-               print "black to move"
+               print("black to move")
            else:
-               print "white to move"
-           print "Legal moves:",self.get_legal_moves(self.stm)
-           print
+               print("white to move")
+           print("Legal moves:",self.get_legal_moves(self.stm))
+           print()
        self.info_draw()
        if self.player[self.stm] == HUMAN and self.legal_moves == []:
            self.menu_play.entryconfig("Pass",state=tk.NORMAL)
@@ -976,7 +976,7 @@ class Othello(tk.Frame):
         self.dprint("working directory changed to" ,os.getcwd())
         self.dprint("starting subprocess")
         try:
-            p = subprocess.Popen(arglist, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            p = subprocess.Popen(arglist, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
             self.p = p
         except OSError:
             self.dprint("Error starting engine - check path/permissions")
@@ -998,7 +998,7 @@ class Othello(tk.Frame):
 
         # start thread to read stdout
         self.op = []
-        self.soutt = thread.start_new_thread( self.read_stdout, () )
+        self.soutt = _thread.start_new_thread( self.read_stdout, () )
         #self.command('xboard\n')
         self.command('protover 2\n')
 
@@ -1007,7 +1007,6 @@ class Othello(tk.Frame):
         i = 0
         while True:            
             for l in self.op:
-                l = l.strip()
                 if l.startswith("feature "):
                     response_ok = True
                     f = shlex.split(l)
@@ -1034,7 +1033,8 @@ class Othello(tk.Frame):
 
     def command(self, cmd):
         try:
-            self.p.stdin.write(cmd)
+            self.p.stdin.write(bytes(cmd, "UTF-8"))
+            self.p.stdin.flush()
         except AttributeError:
             self.dprint("AttributeError")
         except IOError:
@@ -1045,13 +1045,13 @@ class Othello(tk.Frame):
             try:
                 self.p.stdout.flush()
                 line = self.p.stdout.readline()
-                #print "line=",line
+                line = line.decode("UTF-8")
                 line = line.strip()
                 if line == '':
                     self.dprint("eof reached in read_stdout")
                     break  
                 self.op.append(line)
-            except Exception, e:
+            except Exception as e:
                 self.dprint("subprocess error in read_stdout:",e)
 
     def flip(self, x, y, incx, incy, stm):
@@ -1100,19 +1100,19 @@ def set_aspect(content_frame, info_frame, pad_frame, aspect_ratio, gap, bordersi
         desired_width = desired_width * 0.95
         desired_height = desired_height * 0.95
 
-        info_frame_width = desired_width / 2
+        info_frame_width = int(desired_width / 2)
         tot_width = desired_width + info_frame_width + gap
         #content_frame.place(in_=pad_frame, x=0, y=0, 
         #    width=desired_width, height=desired_height)
         #print "event.width/tot_width=",event.width,tot_width
-        x = (event.width - tot_width) / 2
+        x = int((event.width - tot_width) / 2)
         if x < 0:
             x = 0
-        content_frame.place(in_=pad_frame, x=x, y=(event.height - desired_height) / 2 - bordersize, 
+        content_frame.place(in_=pad_frame, x=x, y=int((event.height - desired_height) / 2) - bordersize, 
             width=desired_width, height=desired_height)
         x = x + desired_width + gap
         info_frame.place(in_=pad_frame, x=x, y=(event.height - desired_height) / 2 - bordersize, 
-            width=desired_width / 2, height=desired_height)
+            width=int(desired_width / 2), height=desired_height)
         #info_frame.place(in_=pad_frame, x=(event.width - tot_width) / 2 + desired_width, y=0, 
         #    width=desired_width / 2, height=desired_height)
         #content_frame.place(in_=pad_frame, x=(event.width - desired_width) / 2, y=(event.height - desired_height) / 2, 
