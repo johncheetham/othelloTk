@@ -895,10 +895,6 @@ class Othello(tk.Frame):
         # Check for move from engine
         for l in self.op:
             l = l.strip()
-            # FIXME - windows XP 32 bit appears to lose the first "m"
-            if l.startswith('ove'):
-                self.mv = l[6:]
-                break
             if l.startswith('move'):
                 self.mv = l[7:]
                 break
