@@ -24,7 +24,6 @@ import dialogs as dlg
 import subprocess
 import _thread
 import time
-#import inspect
 import os
 import shlex
 import json
@@ -952,13 +951,11 @@ class Othello(tk.Frame):
     def engine_init(self):
         self.dprint("Initialising Engine")
         self.engine_active = False
-        #this_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-        #path = this_dir + os.sep + "edax.sh"
         path = self.settings["enginepath"]
         if not os.path.exists(path):
             self.dprint("Error enginepath does not exist")
             return
-        self.dprint("path=",path)
+        self.dprint("engine path",path)
 
         arglist = [path,"-xboard", "-n", "1"]
         optionsfile = os.path.join (self.othellopath, "edax.ini")
@@ -966,26 +963,18 @@ class Othello(tk.Frame):
             arglist.extend(["option-file", optionsfile])
         self.dprint("subprocess args:",arglist)
 
-        #
-        # change the working directory to that of the engine before starting it
-        #
-        orig_cwd = os.getcwd()
-        self.dprint("current working directory is", orig_cwd)
+        # engine working directory containing the executable
         engine_wdir = os.path.dirname(path)
-        os.chdir(engine_wdir)
-        self.dprint("working directory changed to" ,os.getcwd())
-        self.dprint("starting subprocess")
+        self.dprint("engine working directory" ,engine_wdir)
+
         try:
-            p = subprocess.Popen(arglist, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+            p = subprocess.Popen(arglist, stdin=subprocess.PIPE, stdout=subprocess.PIPE, cwd=engine_wdir)
             self.p = p
         except OSError:
             self.dprint("Error starting engine - check path/permissions")
             #tkMessageBox.showinfo("OthelloTk Error", "Error starting engine",
             #                       detail="Check path/permissions")
             return
-
-        os.chdir(orig_cwd)
-        self.dprint("current working directory restored back to", os.getcwd())
 
         # check process is running
         i = 0
