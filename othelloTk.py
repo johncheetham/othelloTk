@@ -343,7 +343,7 @@ class Othello(tk.Frame):
 
         def load_game():
             self.dprint("load game")
-            filename = tkinter.filedialog.askopenfilename()
+            filename = tkinter.filedialog.askopenfilename(filetypes=[("SGF files", "*.sgf")])
             if not filename:
                 return
             f = open(filename)
@@ -361,6 +361,7 @@ class Othello(tk.Frame):
             self.dprint("save game")
             options = {}
             options['defaultextension'] = ".sgf"
+            options['filetypes'] = [("SGF files", "*.sgf")]
             filename = tkinter.filedialog.asksaveasfilename(**options)
             if not filename:
                 return
