@@ -6,18 +6,31 @@ John Cheetham August 2015
 Written in python3/Tkinter and licensed under the GPL v3+
 (see the file named LICENSE).
 
-It was tested with edax 4.3.2 and Python 3.4.3 on CentOS7 64 bit.
+It was tested with edax 4.3.2 and Python 3.4.3 on Linux.
 
 Requirements
 ------------
-Python 3, Tkinter, Edax.
+Python 3, tkinter, Edax.
 
-Installation
-------------
+Running OthelloTk
+-----------------
+You can run it from the source folder with the command:
+
+    python run.py
+
+Alternatively you can install it on your system with the command:
+
+    python setup.py install
+
+This command should be run as root user.
+You can then run it with the command 'othellotk'.
+
+Setting up the Engine Path
+--------------------------
  1. Download the edax othello engine from http://abulmo.perso.neuf.fr
     This has a prebuilt binary for Linux 64 bit.
 
- 2. Start othelloTk with 'python othelloTk'
+ 2. Start othelloTk.
 
  3. Do Engine/Set Engine Path and set the engine path to the edax
     executable.
@@ -33,16 +46,14 @@ Click on a square to place a black stone.
 If you find there are no legal moves then you can pass by right
 clicking anywhere on the board.
 
-You can set some edax engine options using an edax.ini file.
-Copy this file into the ~/.othelloTk/ folder (or into the edax bin folder)
-for it to work. For example if you want edax to output a log file then
-add a line like this:
-
-    ui-log-file /path/to/logfile.txt
+Edax allows you to configure engine settings in a file named
+edax.ini. Copy this file into the ~/.othelloTk/ folder
+(or into the edax bin folder). See edax documentaion for more on this.
 
 To display debug messages use the -debug flag:
 
-    python othelloTk -debug
+    'python run.py -debug'
+ or 'othelloTk -debug' if installed
 
 If the engine is taking too long to move you can use ctrl-m to make it
 move instantly. Use the time control menu option to set the time to

@@ -20,7 +20,7 @@
 
 import tkinter as tk
 import tkinter.filedialog
-import dialogs as dlg
+import othellotk.dialogs as dlg
 import subprocess
 import _thread
 import time
@@ -1105,7 +1105,9 @@ def set_aspect(content_frame, info_frame, pad_frame, aspect_ratio, gap, bordersi
         #    width=desired_width, height=desired_height)
     pad_frame.bind("<Configure>", enforce_aspect_ratio)
 
-if __name__ == "__main__":
+def main():
+    global root
+    global debug
     debug = False
     for arg in sys.argv:
         if arg == "-debug":
@@ -1114,4 +1116,9 @@ if __name__ == "__main__":
     app = Othello(root)
     root.aspect(894, 600, 16, 10)
     app.mainloop()
+
+if __name__ == "__main__":
+    main()
+
+
 
