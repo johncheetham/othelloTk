@@ -210,7 +210,8 @@ class Othello(tk.Frame):
             # Undo 2 moves so it's still humans move
             self.command("remove\n")  # undo 2 moves in engine
             undo_move()
-            undo_move()
+            if self.stm != BLACK:
+                undo_move()
 
             self.listbox.delete(tk.END)
             self.draw_board()
@@ -243,7 +244,8 @@ class Othello(tk.Frame):
 
             # Redo 2 moves so it's still humans move
             redo_move()
-            redo_move()
+            if self.redolist != []:
+                redo_move()
 
             self.first = True
             self.draw_board()
@@ -351,7 +353,10 @@ class Othello(tk.Frame):
             movelist = []
             while line:
                 if line.startswith(";B[") or line.startswith(";W["):
-                    mv = line[3:5]
+                    if line[3] == "@":
+                        mv = line[3:7]
+                    else:
+                        mv = line[3:5]
                     movelist.append(mv)
                 line=f.readline()
             f.close()
@@ -517,11 +522,12 @@ class Othello(tk.Frame):
                 #self.add_move(x, y)
                 self.movelist.append(mv)
                 self.movecount += 1
-                x, y = self.conv_to_coord(mv)
+                if mv != "@@@@":                    
+                    x, y = self.conv_to_coord(mv)
 
-                # place piece and flip opponents pieces
-                for incx, incy in [(-1, 0), (-1, -1), (0, -1), (1, -1), (1,0), (1, 1), (0, 1), (-1, 1)]:
-                    self.flip(x, y, incx, incy, self.stm)
+                    # place piece and flip opponents pieces
+                    for incx, incy in [(-1, 0), (-1, -1), (0, -1), (1, -1), (1,0), (1, 1), (0, 1), (-1, 1)]:
+                        self.flip(x, y, incx, incy, self.stm)
                 try:
                     self.board_hist[self.movecount] = copy.deepcopy(self.board)
                 except IndexError:
