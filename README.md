@@ -1,8 +1,6 @@
 # othelloTk
 Edax gui to play Othello against the Edax engine.
 
-John Cheetham August 2015
-
 Written in python3/Tkinter and licensed under the GPL v3+
 (see the file named LICENSE).
 

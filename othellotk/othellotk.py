@@ -31,7 +31,7 @@ import tkinter.messagebox
 import copy
 import sys
 
-VERSION = "0.0.1"
+VERSION = "0.1.0"
 BLACK=0
 WHITE=1
 UNOCCUPIED=-1
