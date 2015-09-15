@@ -932,9 +932,10 @@ class Othello(tk.Frame):
         mv = self.mv
 
         # pass
-        if mv == "@@@@":
+        if mv == "@@":
             self.stm = abs(self.stm - 1)
-            self.add_move_to_list(mv)
+            self.add_move_to_list("@@@@")
+            self.print_board()
             return
 
         # convert move to board coordinates (e.g. "d6" goes to 3, 5)
