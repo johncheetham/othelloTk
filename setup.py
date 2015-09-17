@@ -8,7 +8,7 @@ def read(fname):
 
 setup(
     name = "othellotk",
-    version = "0.1.0-2",
+    version = "0.1.1",
     packages = ["othellotk"],
 
     entry_points={

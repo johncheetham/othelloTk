@@ -14,13 +14,9 @@ Running OthelloTk
 -----------------
 There are 3 ways to install/run it.
 
- 1. Run it from the source folder by running the run or run.py scripts:
+ 1. Run it from the source folder by running the run.py script:
 
         python run.py
-
-        or
-
-        ./run
 
  2. Install it on your system with the command:
 
