@@ -1,9 +1,14 @@
+import os
 import ez_setup
 ez_setup.use_setuptools()
 from setuptools import setup
+
+def read(fname):
+    return open(os.path.join(os.path.dirname(__file__), fname)).read()
+
 setup(
     name = "othellotk",
-    version = "0.1.0",
+    version = "0.1.0-2",
     packages = ["othellotk"],
 
     entry_points={
@@ -19,4 +24,15 @@ setup(
     license = "GPLv3+",
     keywords = "othello edax tkinter",
     url = "http://www.johncheetham.com/projects/othellotk/",
+    long_description=read('README.rst'),
+    classifiers=[
+        "Development Status :: 5 - Production/Stable",
+        "Environment :: X11 Applications",
+        "Intended Audience :: End Users/Desktop",
+        "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+        "Natural Language :: English",
+        "Operating System :: POSIX :: Linux",
+        "Programming Language :: Python :: 3",
+        "Topic :: Games/Entertainment :: Board Games",
+    ],
 )

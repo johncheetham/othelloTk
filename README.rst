@@ -1,9 +1,9 @@
-# othelloTk
-Edax gui to play Othello against the Edax engine.
+OthelloTk
+---------
 
+Edax gui to play Othello against the Edax engine.
 Written in python3/Tkinter and licensed under the GPL v3+
 (see the file named LICENSE).
-
 It was tested with edax 4.3.2 and Python 3.4.3 on Linux.
 
 Requirements
@@ -12,16 +12,28 @@ Python 3, tkinter, Edax.
 
 Running OthelloTk
 -----------------
-You can run it from the source folder with the command:
+There are 3 ways to install/run it.
 
-    python run.py
+ 1. Run it from the source folder by running the run or run.py scripts:
 
-Alternatively you can install it on your system with the command:
+        python run.py
 
-    python setup.py install
+        or
 
-This command should be run as root user.
-You can then run it with the command 'othellotk'.
+        ./run
+
+ 2. Install it on your system with the command:
+
+        python setup.py install
+
+        This command should be run as root user.
+        You can then run it with the command 'othellotk'.
+
+ 3. Install it from PyPI
+
+        pip install othellotk
+
+        You can then run it with the command 'othellotk'.
 
 Setting up the Engine Path
 --------------------------
@@ -50,10 +62,9 @@ edax.ini. Copy this file into the ~/.othelloTk/ folder
 
 To display debug messages use the -debug flag:
 
-    'python run.py -debug'
- or 'othelloTk -debug' if installed
+    python run.py -debug
+    (or othelloTk -debug if installed)
 
 If the engine is taking too long to move you can use ctrl-m to make it
 move instantly. Use the time control menu option to set the time to
 move.
-
