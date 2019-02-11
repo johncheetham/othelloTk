@@ -33,15 +33,21 @@ There are 3 ways to install/run it.
 
 Setting up the Engine Path
 --------------------------
- 1. Download the edax othello engine from http://abulmo.perso.neuf.fr
+ 1. Download the edax othello engine from https://github.com/abulmo/edax-reversi.
     This has a prebuilt binary for Linux 64 bit.
+    You need to download the last release (4.4 at the time of writing).
+    The files you need are edax-linux.7z and eval.7z.
+
+    Create a folder and extract these files:
+
+      7za x edax-linux.7z
+      
+      7za x eval.7z
 
  2. Start othelloTk.
 
  3. Do Engine/Set Engine Path and set the engine path to the edax
-    executable.
-    This is called lEdax-x64 in the edax bin folder (if you are using
-    Linux 64 bit).
+    executable. This is called edax-4.4.
 
  4. Start the game by left clicking to place a black stone.
 
